@@ -1,5 +1,6 @@
 // ⚙ sheet: export the save as a code, import one back, or start a new winter. No browser dialogs.
 import { currentExportCode, importSave, newWinter } from '../../game/runtime';
+import { isMuted, setMuted } from '../../game/sound';
 import { h } from './dom';
 import type { Screen } from './Shell';
 
@@ -50,10 +51,21 @@ export function settingsScreen(close: () => void): Screen {
   };
   resetConfirm();
 
+  const soundButton = h('button', { class: 'btn' });
+  const showSound = (): void => {
+    soundButton.textContent = `Sound: ${isMuted() ? 'Off' : 'On'}`;
+  };
+  soundButton.addEventListener('click', () => {
+    setMuted(!isMuted());
+    showSound();
+  });
+  showSound();
+
   const el = h(
     'section',
     {},
     h('h1', {}, 'Settings'),
+    h('div', { class: 'row-buttons' }, soundButton),
     h('h2', {}, 'Back up your city'),
     h('p', {}, 'Safari can clear saved games. Copy this code somewhere safe to bring the city back later.'),
     exportBox,

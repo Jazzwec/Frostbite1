@@ -26,10 +26,19 @@ const TABS: Array<{ key: TabKey; icon: string; label: string }> = [
 ];
 
 const REFRESH_MS = 250;
+/** The strip's numbers glide to new values over roughly this long instead of jumping. */
+const COUNT_EASE_MS = 180;
+
+type Counted = 'jans' | 'wood' | 'food' | 'materials';
 
 export class Shell {
   private readonly layer: HTMLElement;
   private readonly strip = h('div', { class: 'strip' });
+  private readonly counts = h('span');
+  private readonly weather = h('span');
+  private shown: Record<Counted, number>;
+  private countsText = '';
+  private lastFrame = 0;
   private readonly tabButtons = new Map<TabKey, HTMLButtonElement>();
   private active: TabKey = 'city';
   private screen: Screen | null = null;
@@ -40,6 +49,9 @@ export class Shell {
   ) {
     this.layer = document.getElementById('ui')!;
     this.setPalette();
+    this.strip.append(this.counts, this.weather);
+    this.shown = this.actualCounts();
+    requestAnimationFrame((t) => this.animate(t));
 
     const bar = h('nav', { class: 'tabbar', style: `height: calc(var(--u) * ${TAB_BAR_HEIGHT})` });
     for (const t of TABS) {
@@ -107,16 +119,36 @@ export class Shell {
 
   private refresh(): void {
     const s = engine.state;
-    const r = s.resources;
     const bz = s.blizzard;
     const name = bz.long ? 'Long Night' : 'Blizzard';
-    let weather: HTMLElement | null = null;
-    if (bz.active) weather = h('span', { class: 'blizzard now' }, `❄ ${name}! ${formatClock(bz.end - s.t)} left`);
-    else if (bz.warned) weather = h('span', { class: 'blizzard' }, `❄ ${name} in ${formatClock(bz.next - s.t)}`);
-    this.strip.replaceChildren(
-      `Jans ${s.jans.length}/${janCap(s)} · Wood ${formatNumber(r.wood)} · Food ${formatNumber(r.food)} · Mat ${formatNumber(r.materials)}`,
-      ...(weather ? [weather] : []),
-    );
+    if (bz.active) this.setWeather(`❄ ${name}! ${formatClock(bz.end - s.t)} left`, 'blizzard now');
+    else if (bz.warned) this.setWeather(`❄ ${name} in ${formatClock(bz.next - s.t)}`, 'blizzard');
+    else this.setWeather('', '');
     this.screen?.refresh();
+  }
+
+  private setWeather(text: string, cls: string): void {
+    if (this.weather.textContent !== text) this.weather.textContent = text;
+    if (this.weather.className !== cls) this.weather.className = cls;
+  }
+
+  private actualCounts(): Record<Counted, number> {
+    const s = engine.state;
+    return { jans: s.jans.length, wood: s.resources.wood, food: s.resources.food, materials: s.resources.materials };
+  }
+
+  /** Every frame, ease the shown numbers towards the real ones (numbers animate when they change, per the brief). */
+  private animate(now: number): void {
+    const k = 1 - Math.exp(-(now - this.lastFrame) / COUNT_EASE_MS);
+    this.lastFrame = now;
+    const actual = this.actualCounts();
+    for (const key of Object.keys(actual) as Counted[]) {
+      const d = actual[key] - this.shown[key];
+      this.shown[key] = Math.abs(d) < 0.5 ? actual[key] : this.shown[key] + d * k;
+    }
+    const v = this.shown;
+    const text = `Jans ${Math.round(v.jans)}/${janCap(engine.state)} · Wood ${formatNumber(v.wood)} · Food ${formatNumber(v.food)} · Mat ${formatNumber(v.materials)}`;
+    if (text !== this.countsText) this.counts.textContent = this.countsText = text;
+    requestAnimationFrame((t) => this.animate(t));
   }
 }

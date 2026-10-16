@@ -99,6 +99,11 @@ export class JanSprite extends Phaser.GameObjects.Container {
     this.bubbleUntil = this.clock + ms;
   }
 
+  /** A happy hop (just thawed). */
+  bounce(): void {
+    this.scene.tweens.add({ targets: this, scaleY: 1.25, scaleX: 0.85, duration: 130, yoyo: true, repeat: 1, ease: 'Quad.out' });
+  }
+
   get speaking(): boolean {
     return this.bubble !== null;
   }

@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { buildingName, chatterLine, rescueLine } from '../content';
 import { MEAGAN } from '../engine/balance';
-import { carryLimit, caravanWait, heatCap, nextCost } from '../engine/economy';
+import { bagTotal, carryLimit, caravanWait, heatCap, nextCost } from '../engine/economy';
 import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
 import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
 import { bus } from '../game/bus';
 import { devFlags, engine, saveNow } from '../game/runtime';
+import { sfx } from '../game/sound';
 import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
 import { AnimalSprite } from '../ui/AnimalSprite';
@@ -29,6 +30,9 @@ const FROZEN_TAP_RADIUS = 55;
 /** Idle chatter: one line over a random working Jan every 20–30 s while the city is calm (brief). */
 const CHATTER_MIN_MS = 20_000;
 const CHATTER_MAX_MS = 30_000;
+/** A pick-up or delivery plink once this much has moved in or out of her bag, at most this often. */
+const BAG_SOUND_UNITS = 2;
+const BAG_SOUND_GAP_MS = 120;
 /** Jans sharing a job stand in a little group around its work spot. */
 const CROWD = { perRow: 4, dx: 26, dy: 24 } as const;
 
@@ -49,6 +53,9 @@ export class CityScene extends Phaser.Scene {
   /** What a just-thawed Jan says once his sprite exists, keyed by Jan id. */
   private readonly thawLine = new Map<number, string>();
   private chatterIn = CHATTER_MIN_MS;
+  private lastBag = 0;
+  private bagFlow = 0;
+  private bagSoundGap = 0;
   /** engine.loadCount when this scene was built; a different value means a save was loaded. */
   private builtFor = 0;
 
@@ -63,6 +70,8 @@ export class CityScene extends Phaser.Scene {
     this.animals.clear();
     this.thawedAt.clear();
     this.thawLine.clear();
+    this.lastBag = bagTotal(engine.state);
+    this.bagFlow = 0;
     this.builtFor = engine.loadCount;
     this.makeTextures();
     this.drawBackground();
@@ -101,6 +110,7 @@ export class CityScene extends Phaser.Scene {
     this.meagan.follow(toScreen(s.meagan), s.meagan.path.length > 0, delta);
     this.meagan.setBag(s.meagan.bag, carryLimit(s));
     this.meagan.setHealth(s.meagan.hp / MEAGAN.hp, s.meagan.injured);
+    this.bagSounds(s, delta);
     this.syncJans(s, delta);
     this.syncAnimals(s, delta);
     this.chatter(s, delta);
@@ -147,6 +157,7 @@ export class CityScene extends Phaser.Scene {
     } else if (e.type === 'buildingUpgraded') {
       saveNow();
       const name = buildingName(e.building);
+      this.tweens.add({ targets: this.sites[e.site], scaleY: 1.12, scaleX: 0.94, duration: 140, yoyo: true, ease: 'Quad.out' });
       this.floater(this.sites[e.site].top, e.level === 1 ? `${name} built!` : `${name} Lv ${e.level}!`);
     }
   }
@@ -211,7 +222,10 @@ export class CityScene extends Phaser.Scene {
         this.thawedAt.delete(jan.id);
         this.jans.set(jan.id, (sprite = new JanSprite(this, toScreen(from), false)));
         const line = this.thawLine.get(jan.id);
-        if (line) sprite.say(line);
+        if (line) {
+          sprite.say(line);
+          sprite.bounce();
+        }
         this.thawLine.delete(jan.id);
       }
       // In a fight, guards follow their combat units instead of standing at their spot.
@@ -229,6 +243,18 @@ export class CityScene extends Phaser.Scene {
       }
       sprite.tick(delta);
     }
+  }
+
+  /** Plinks as things go into her bag and out of it, like the ads. */
+  private bagSounds(s: GameState, delta: number): void {
+    const total = bagTotal(s);
+    this.bagFlow += total - this.lastBag;
+    this.lastBag = total;
+    this.bagSoundGap -= delta;
+    if (this.bagSoundGap > 0 || Math.abs(this.bagFlow) < BAG_SOUND_UNITS) return;
+    (this.bagFlow > 0 ? sfx.pickup : sfx.deliver)();
+    this.bagFlow = 0;
+    this.bagSoundGap = BAG_SOUND_GAP_MS;
   }
 
   /** Now and then, a working Jan says something, but only while the city is calm. */

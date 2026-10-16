@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import './style.css';
 import './ui/overlay/overlay.css';
-import { lastSeen } from './game/runtime';
+import { engine, lastSeen } from './game/runtime';
+import { sfx, wireSound } from './game/sound';
 import { CityScene } from './scenes/CityScene';
 import { CSS, GAME_HEIGHT, GAME_WIDTH } from './theme';
 import { buildScreen } from './ui/overlay/BuildScreen';
@@ -36,5 +37,6 @@ new Shell(game, {
 
 const layer = document.getElementById('ui')!;
 new Banner(layer);
-new MilestoneCards(layer);
+new MilestoneCards(layer, () => sfx.milestone());
+wireSound(() => engine.state.blizzard.active);
 showWelcome(layer, lastSeen);
