@@ -37,12 +37,12 @@ describe('save', () => {
   it('fills missing or mistyped fields from a fresh winter', () => {
     const e = played();
     const raw = JSON.parse(serialize(e.state));
-    delete raw.state.found;
+    delete raw.state.meta.found;
     delete raw.state.meagan.bag;
     raw.state.fuel = 'lots';
     raw.state.sites = raw.state.sites.slice(0, 5); // an older layout with fewer plots
     const s = deserialize(JSON.stringify(raw))!.state;
-    expect(s.found.plain).toBe(0);
+    expect(s.meta.found.plain).toBe(0);
     expect(s.meagan.bag).toEqual({ wood: 0, food: 0, materials: 0 });
     expect(s.fuel).toBe(0);
     expect(s.sites).toHaveLength(SITES.length);

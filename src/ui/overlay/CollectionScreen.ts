@@ -7,7 +7,7 @@ import { h } from './dom';
 import { janPortrait } from './portrait';
 import type { Screen } from './Shell';
 
-const ORDER: VariantKey[] = ['plain', 'chef', 'spreadsheet', 'lumberjack', 'sleepy', 'keys'];
+const ORDER: VariantKey[] = ['plain', 'chef', 'spreadsheet', 'lumberjack', 'sleepy', 'keys', 'dj'];
 
 export function collectionScreen(): Screen {
   const body = h('div');
@@ -18,18 +18,18 @@ export function collectionScreen(): Screen {
     const s = engine.state;
     const here: Partial<Record<VariantKey, number>> = {};
     for (const j of s.jans) here[j.variant] = (here[j.variant] ?? 0) + 1;
-    const next = JSON.stringify([s.found, s.stats.rescued, here]);
+    const next = JSON.stringify([s.meta.found, s.meta.stats.rescued, here]);
     if (next === sig) return;
     sig = next;
 
-    const seen = ORDER.filter((v) => s.found[v] > 0).length;
+    const seen = ORDER.filter((v) => s.meta.found[v] > 0).length;
     body.replaceChildren(
-      h('p', {}, `${seen} of ${ORDER.length} kinds of Jan found · ${s.stats.rescued} rescued in all`),
+      h('p', {}, `${seen} of ${ORDER.length} kinds of Jan found · ${s.meta.stats.rescued} rescued in all`),
       h(
         'div',
         { class: 'grid2' },
         ...ORDER.map((v) => {
-          const met = s.found[v];
+          const met = s.meta.found[v];
           const portrait = h('div', { class: 'portrait' });
           portrait.innerHTML = janPortrait(v, met > 0); // static SVG built from theme colours
           if (met === 0) {

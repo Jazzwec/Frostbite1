@@ -1,7 +1,7 @@
 // Every tunable number in the game. Engine logic reads from here and never hard-codes a value.
 // [brief] = from docs/design-brief.md. [planned] = decided with Jan while planning the engine (also recorded in the brief).
 
-import type { AnimalKind, BuildingKey, JobKey, ResourceKey, VariantKey } from './types';
+import type { AnimalKind, BuildingKey, JobKey, ResourceKey, ShopKey, VariantKey } from './types';
 
 /** Fixed simulation step in seconds: 10 ticks per second. [brief] */
 export const TICK_SECONDS = 0.1;
@@ -127,6 +127,8 @@ export interface VariantDef {
   workMult?: number;
   /** Multiplier on food eaten. */
   foodMult?: number;
+  /** Every job +amount per Jan of this variant in the city, counting at most `max` of them (DJ Jan). */
+  cityBonus?: { amount: number; max: number };
   /** Unlocks when this building reaches this level (Furnace level for the tier gates). */
   unlock: { building: BuildingKey; level: number };
 }
@@ -139,6 +141,8 @@ export const VARIANTS: Record<VariantKey, VariantDef> = {
   spreadsheet: { weight: 1, jobMult: { research: 1.25 }, unlock: { building: 'researchHut', level: 1 } },
   keys: { weight: 1, unlock: { building: 'furnace', level: 4 } },
   lumberjack: { weight: 1, jobMult: { chop: 1.25 }, unlock: { building: 'lumberYard', level: 2 } },
+  // Tier 3. The brief's "+10% while adjacent" needs positions; this is the prototype's +5% each, up to 3. [planned]
+  dj: { weight: 1, cityBonus: { amount: 0.05, max: 3 }, unlock: { building: 'furnace', level: 7 } },
 };
 
 // ---------- Meagan ----------
@@ -275,7 +279,8 @@ export type BonusEffect =
   | 'foodEaten'
   | 'scavenge'
   | 'guardDamage'
-  | 'caravanWait';
+  | 'caravanWait'
+  | 'caps';
 
 export interface ResearchNode {
   effect: BonusEffect;
@@ -306,6 +311,43 @@ export const RESEARCH = {
   } satisfies Record<string, ResearchNode>,
 };
 export type ResearchKey = keyof typeof RESEARCH.nodes;
+
+// ---------- Prestige: A New Winter ----------
+
+export const PRESTIGE = {
+  /** The thaw arrives at this Furnace level. [brief] */
+  thawFurnaceLevel: 10,
+  /** Warmth Tokens: 1 per Furnace level reached plus 1 per this many Jans in the city at the thaw. [brief] */
+  tokensPerFurnaceLevel: 1,
+  jansPerToken: 10,
+  /** Jans that can be promoted to Veteran at a thaw, before Old friends. [brief] */
+  veteranSlots: 3,
+  /** Each Veteran in the city adds this to all output. [brief] */
+  veteranBonus: 0.05,
+} as const;
+
+export interface ShopItem {
+  /** Warmth Tokens per rank (flat). [brief cost; flat per rank is planned] */
+  cost: number;
+  maxRank: number;
+  /** The permanent bonus it gives per rank, if it is one of the shared bonus effects. */
+  effect?: BonusEffect;
+  amount?: number;
+}
+
+export const SHOP: Record<ShopKey, ShopItem> = {
+  /** Begin each winter with Furnace Lv 2 and 50 Wood in the furnace. */
+  warmStart: { cost: 3, maxRank: 1 },
+  thickWalls: { cost: 4, maxRank: 5, effect: 'drain', amount: -0.05 },
+  fastFeet: { cost: 4, maxRank: 5, effect: 'arrivals', amount: -0.1 },
+  /** Storehouse resources' caps (Wood, Food, Materials). */
+  deepPockets: { cost: 5, maxRank: 3, effect: 'caps', amount: 0.25 },
+  /** +1 Veteran slot per rank. */
+  oldFriends: { cost: 6, maxRank: 2 },
+  headStart: { cost: 8, maxRank: 5, effect: 'allJobs', amount: 0.1 },
+};
+
+export const WARM_START = { furnaceLevel: 2, fuel: 50 } as const;
 
 // ---------- Blizzards ----------
 

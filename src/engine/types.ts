@@ -20,7 +20,9 @@ export type BuildingKey =
 export type JobKey = 'chop' | 'hunt' | 'build' | 'research' | 'scavenge' | 'guard';
 export type Assignment = JobKey | 'idle';
 
-export type VariantKey = 'plain' | 'chef' | 'sleepy' | 'spreadsheet' | 'keys' | 'lumberjack';
+export type VariantKey = 'plain' | 'chef' | 'sleepy' | 'spreadsheet' | 'keys' | 'lumberjack' | 'dj';
+
+export type ShopKey = 'warmStart' | 'thickWalls' | 'fastFeet' | 'deepPockets' | 'oldFriends' | 'headStart';
 
 export type GearKey = 'weapons' | 'armour';
 
@@ -43,6 +45,8 @@ export interface Jan {
   job: Assignment;
   /** Guards fight at full strength only with a kit. */
   hasKit: boolean;
+  /** Promoted at a thaw: carried into the next winter, +5% to all output. */
+  veteran?: boolean;
 }
 
 /** A Jan waiting frozen at the map edge (at x, y) to be rescued. */
@@ -123,6 +127,23 @@ export interface AttackState {
   breached: boolean;
 }
 
+/** Kept across winters (prestige). Only "Start over" in Settings wipes it. */
+export interface Meta {
+  /** Warmth Tokens to spend in the shop. */
+  tokens: number;
+  shop: Record<ShopKey, number>;
+  /** Thaws completed. */
+  winters: number;
+  /** Variants that were unlocked in any winter stay unlocked. */
+  unlockedVariants: VariantKey[];
+  /** Jans met per variant, ever (returning Jans don't count again): the Collection. */
+  found: Record<VariantKey, number>;
+  /** Ids of milestones already shown; each fires once ever. */
+  milestones: string[];
+  /** Lifetime counts for milestones and the Collection. */
+  stats: { rescued: number; blizzardsSurvived: number; attacksRepelled: number; veterans: number };
+}
+
 export interface GameState {
   /** Active play time in seconds. */
   t: number;
@@ -151,11 +172,10 @@ export interface GameState {
   attack: AttackState;
   /** Last second's Wood burned per second, for display. */
   burnRate: number;
-  /** Jans met per variant this winter (returning Jans don't count again), for the Collection screen. */
-  found: Record<VariantKey, number>;
-  stats: { rescued: number; blizzardsSurvived: number; attacksRepelled: number };
-  /** Ids of milestones already shown. */
-  milestones: string[];
+  /** Everything that survives the thaw into the next winter. */
+  meta: Meta;
+  /** The thaw's tokens have been claimed; only startNewWinter is left. */
+  thawed: boolean;
   /** Research nodes bought this winter (keys of RESEARCH.nodes). */
   research: string[];
   /** Auto-assign switch on the Jans screen, and time since its last rebalance. */

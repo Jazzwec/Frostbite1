@@ -28,5 +28,10 @@
     "name": "Lumberjack Jan",
     "bonus": "+25% Chopping",
     "bio": "Speaks fluent tree. Noticeably more productive in a checked shirt."
+  },
+  "dj": {
+    "name": "DJ Jan",
+    "bonus": "+5% to every job (up to 3 DJs)",
+    "bio": "Brings his own soundtrack. Everyone works a little harder when he is around."
   }
 }

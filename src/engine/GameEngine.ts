@@ -1,5 +1,21 @@
 // The game's rules engine: owns state, runs the fixed tick, exposes player actions. No Phaser or DOM in here.
-import { AUTO_JOB, BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, RESEARCH, START, TICK_SECONDS, VARIANTS, type ResearchKey } from './balance';
+import {
+  AUTO_JOB,
+  BLIZZARD,
+  BUILDINGS,
+  CARAVAN,
+  GEAR,
+  MAX_ADVANCE_SECONDS,
+  MEAGAN,
+  PATH,
+  RESEARCH,
+  SHOP,
+  START,
+  TICK_SECONDS,
+  VARIANTS,
+  WARM_START,
+  type ResearchKey,
+} from './balance';
 import { updateAttacks } from './combat';
 import {
   arrivalInterval,
@@ -25,14 +41,31 @@ import { rescueArrival, updateArrivals, updateBlizzard, updateHeatZero, updateSc
 import { MAP_BOUNDS, MEAGAN_START, SITES, distance, siteIndexOf } from './map';
 import { rebalanceJobs, updateAutoAssign } from './jobs';
 import { updateMeagan } from './meagan';
+import { canBuyShop, canThaw, claimThaw, shopPrice, startNewWinter } from './prestige';
 import { buildGrid, findPath, type NavGrid } from './pathfinding';
 import { seededRng, type Rng } from './rng';
-import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, JobKey, Point, ResourceKey, VariantKey } from './types';
+import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, JobKey, Meta, Point, ResourceKey, ShopKey, VariantKey } from './types';
 
-export function newWinterState(): GameState {
+/** A fresh Meta: no tokens, nothing found. Only a first run or "Start over" uses it. */
+export function newMeta(): Meta {
+  return {
+    tokens: 0,
+    shop: Object.fromEntries((Object.keys(SHOP) as ShopKey[]).map((k) => [k, 0])) as Record<ShopKey, number>,
+    winters: 0,
+    unlockedVariants: [],
+    found: Object.fromEntries((Object.keys(VARIANTS) as VariantKey[]).map((v) => [v, 0])) as Record<VariantKey, number>,
+    milestones: [],
+    stats: { rescued: 0, blizzardsSurvived: 0, attacksRepelled: 0, veterans: 0 },
+  };
+}
+
+/** The start of a winter. `meta` carries over from the last one (Warm start applies here). */
+export function newWinterState(meta: Meta = newMeta()): GameState {
   const buildings = Object.fromEntries(
     (Object.keys(BUILDINGS) as BuildingKey[]).map((k) => [k, BUILDINGS[k].start]),
   ) as Record<BuildingKey, number>;
+  const warm = meta.shop.warmStart > 0;
+  if (warm) buildings.furnace = WARM_START.furnaceLevel;
   return {
     t: 0,
     heat: START.heat,
@@ -51,7 +84,7 @@ export function newWinterState(): GameState {
       bag: { wood: 0, food: 0, materials: 0 },
       goal: null,
     },
-    fuel: 0,
+    fuel: warm ? WARM_START.fuel : 0,
     sites: SITES.map((d) => ({ building: d.fixed ?? null, upgrading: false, progress: {} })),
     nextId: 1,
     arrivalTimer: 0,
@@ -62,9 +95,8 @@ export function newWinterState(): GameState {
     longNightTier: 1,
     attack: { next: Infinity, warned: false, active: false, animals: [], guards: [], breached: false },
     burnRate: 0,
-    found: Object.fromEntries((Object.keys(VARIANTS) as VariantKey[]).map((v) => [v, 0])) as Record<VariantKey, number>,
-    stats: { rescued: 0, blizzardsSurvived: 0, attacksRepelled: 0 },
-    milestones: [],
+    meta,
+    thawed: false,
     research: [],
     autoAssign: false,
     autoAssignTimer: 0,
@@ -265,10 +297,36 @@ export class GameEngine {
     return nextCost(this.state, key);
   }
 
+  // ---------- The thaw ----------
+
+  get thawReady(): boolean {
+    return canThaw(this.state);
+  }
+
+  /** Open the thaw: bank this winter's tokens (once). Returns how many were earned. */
+  claimThaw(): number {
+    return claimThaw(this.state);
+  }
+
+  buyShop(key: ShopKey): boolean {
+    const s = this.state;
+    if (!canBuyShop(s, key)) return false;
+    s.meta.tokens -= shopPrice(key);
+    s.meta.shop[key]++;
+    return true;
+  }
+
+  /** Start A New Winter with these Jans as Veterans. Only after claimThaw(). */
+  startNewWinter(veteranIds: number[]): boolean {
+    if (!this.state.thawed) return false;
+    this.load(startNewWinter(this.state, veteranIds));
+    return true;
+  }
+
   /** Record that a milestone's card was shown, so it never fires again. */
   markMilestone(id: string): boolean {
-    if (this.state.milestones.includes(id)) return false;
-    this.state.milestones.push(id);
+    if (this.state.meta.milestones.includes(id)) return false;
+    this.state.meta.milestones.push(id);
     return true;
   }
 

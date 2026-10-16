@@ -40,6 +40,13 @@ export function janPortrait(v: VariantKey, found: boolean): string {
     }
   }
 
+  const headphones =
+    v === 'dj'
+      ? `<path d="M34 62 Q34 28 60 28 Q86 28 86 62" fill="none" stroke="${found ? ink : shade}" stroke-width="5"/>
+         <rect x="27" y="54" width="12" height="20" rx="5" fill="${c(COLOURS.ember)}" ${line}/>
+         <rect x="81" y="54" width="12" height="20" rx="5" fill="${c(COLOURS.ember)}" ${line}/>`
+      : '';
+
   const key =
     v === 'keys'
       ? `<g ${found ? '' : 'opacity="0"'}><circle cx="40" cy="100" r="7" fill="none" stroke="${hex(COLOURS.emberGlow)}" stroke-width="4"/>
@@ -53,6 +60,7 @@ export function janPortrait(v: VariantKey, found: boolean): string {
     <ellipse cx="62" cy="76" rx="20" ry="11" fill="${c(COLOURS.hair)}"/>
     ${face}
     ${hat}
+    ${headphones}
     ${key}
   </svg>`;
 }

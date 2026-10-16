@@ -57,11 +57,11 @@ describe('rescue by walking', () => {
     const e = new GameEngine({ seed: 1 });
     run(e, 61);
     const jan = e.rescue(e.state.waiting[0].id)!;
-    expect(e.state.found[jan.variant]).toBe(1);
-    expect(e.state.stats.rescued).toBe(1);
+    expect(e.state.meta.found[jan.variant]).toBe(1);
+    expect(e.state.meta.stats.rescued).toBe(1);
     e.state.waiting.push({ id: 999, x: 0, y: 300, variant: 'plain', fromCaravan: true, returning: true, leavesAt: null });
     e.rescue(999);
-    expect(e.state.stats.rescued).toBe(1);
+    expect(e.state.meta.stats.rescued).toBe(1);
   });
 
   it('leaves him frozen when the city is full', () => {

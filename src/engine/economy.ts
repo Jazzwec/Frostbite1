@@ -14,14 +14,18 @@ import {
   JAN_CAP,
   JOBS,
   MEAGAN,
+  PRESTIGE,
   RESEARCH,
+  SHOP,
   SCAVENGE,
   TIER_STARTS,
   VARIANTS,
   type BonusEffect,
   type ResearchNode,
+  type ShopItem,
+  type VariantDef,
 } from './balance';
-import type { Assignment, BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, SiteState, StoredResource } from './types';
+import type { Assignment, BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, ShopKey, SiteState, StoredResource, VariantKey } from './types';
 
 export type Cost = Partial<Record<ResourceKey, number>>;
 
@@ -59,10 +63,25 @@ function ownedResearch(s: GameState): ResearchNode[] {
   return s.research.filter((k) => k in nodes).map((k) => nodes[k]);
 }
 
-/** Multiplier for one effect from every bonus the city has (Research nodes). 1 when there are none. */
+/**
+ * Multiplier for one effect from every bonus the city has: Research nodes (each compounds), Warmth Token shop
+ * ranks (rank × amount), and for all jobs the Veterans and DJ Jans in the city. 1 when there are none.
+ */
 export function bonusMult(s: GameState, effect: BonusEffect): number {
   let m = 1;
   for (const n of ownedResearch(s)) if (n.effect === effect) m *= 1 + n.amount;
+  for (const [key, item] of Object.entries(SHOP) as Array<[ShopKey, ShopItem]>) {
+    if (item.effect === effect && item.amount) m *= 1 + item.amount * s.meta.shop[key];
+  }
+  if (effect === 'allJobs') {
+    const veterans = s.jans.filter((j) => j.veteran).length;
+    m *= 1 + PRESTIGE.veteranBonus * veterans;
+    for (const [v, def] of Object.entries(VARIANTS) as Array<[VariantKey, VariantDef]>) {
+      if (!def.cityBonus) continue;
+      const n = Math.min(def.cityBonus.max, s.jans.filter((j) => j.variant === v).length);
+      m *= 1 + def.cityBonus.amount * n;
+    }
+  }
   return m;
 }
 
@@ -166,7 +185,7 @@ export function heatDrain(s: GameState, blizzard = s.blizzard.active): number {
 // ---------- Storage and population ----------
 
 export function caps(s: GameState): Record<StoredResource, number> {
-  const store = CAPS.storehouseGrowth ** s.buildings.storehouse;
+  const store = CAPS.storehouseGrowth ** s.buildings.storehouse * bonusMult(s, 'caps');
   return {
     wood: (CAPS.wood + CAPS.woodPerLumberLevel * s.buildings.lumberYard) * store,
     food: CAPS.food * store,

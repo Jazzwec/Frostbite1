@@ -63,6 +63,11 @@
       { "text": "Wait, I found something! Not my keys though.", "weight": 1 },
       { "text": "I definitely had them a minute ago.", "weight": 1 }
     ],
+    "dj": [
+      { "text": "Is this thing on? Testing, testing.", "weight": 1 },
+      { "text": "This town needs a beat.", "weight": 1 },
+      { "text": "Next track: Warming Up.", "weight": 1 }
+    ],
     "lumberjack": [
       { "text": "Which way to the trees?", "weight": 1 },
       { "text": "I can hear the forest calling.", "weight": 1 },

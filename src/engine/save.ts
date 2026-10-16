@@ -26,6 +26,7 @@ export function deserialize(json: string): LoadedSave | null {
     return null;
   }
   if (!isObject(raw) || raw.v !== SAVE_VERSION || !isObject(raw.state)) return null;
+  migrate(raw.state);
   const fresh = newWinterState();
   const state = merge(fresh, raw.state) as GameState;
   // A layout change can add plots: keep saved sites, fill the rest fresh.
@@ -49,6 +50,15 @@ export function importCode(code: string): LoadedSave | null {
   } catch {
     return null;
   }
+}
+
+/** Saves from before prestige kept the collection, milestones and lifetime stats at the top level. */
+function migrate(state: Record<string, unknown>): void {
+  if (isObject(state.meta)) return;
+  state.meta = { found: state.found, milestones: state.milestones, stats: state.stats };
+  delete state.found;
+  delete state.milestones;
+  delete state.stats;
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

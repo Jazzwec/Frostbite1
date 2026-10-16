@@ -28,7 +28,7 @@ export function updateBlizzard(s: GameState, ctx: TickContext): void {
   if (bz.active) {
     if (s.t >= bz.end) {
       bz.active = false;
-      s.stats.blizzardsSurvived++;
+      s.meta.stats.blizzardsSurvived++;
       ctx.emit({ type: 'blizzardEnd', long: bz.long });
       scheduleBlizzard(s, ctx.rng);
     }
@@ -50,9 +50,10 @@ export function updateBlizzard(s: GameState, ctx: TickContext): void {
 
 // ---------- Jans ----------
 
+/** Unlocked by this winter's buildings, or in any earlier winter (unlocks carry over, per the brief). */
 export function variantUnlocked(s: GameState, v: VariantKey): boolean {
   const u = VARIANTS[v].unlock;
-  return s.buildings[u.building] >= u.level;
+  return s.buildings[u.building] >= u.level || s.meta.unlockedVariants.includes(v);
 }
 
 export function pickVariant(s: GameState, rng: Rng, rareOnly = false): VariantKey {
@@ -128,8 +129,8 @@ export function rescueArrival(s: GameState, arrivalId: number, ctx: TickContext)
   const jan: Jan = { id: w.id, variant: w.variant ?? pickVariant(s, ctx.rng), job: neediestJob(s), hasKit: false };
   s.jans.push(jan);
   if (!w.returning) {
-    s.found[jan.variant]++;
-    s.stats.rescued++;
+    s.meta.found[jan.variant]++;
+    s.meta.stats.rescued++;
   }
   ctx.emit({ type: 'rescued', jan, returning: w.returning, from: { x: w.x, y: w.y } });
   if (jan.variant === 'keys' && !w.returning) {

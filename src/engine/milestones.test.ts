@@ -18,18 +18,18 @@ describe('milestone triggers', () => {
     s.jans.push({ id: 1, variant: 'chef', job: 'idle', hasKit: false } satisfies Jan);
     expect(triggerMet(s, { type: 'jans', count: 1 })).toBe(true);
     expect(triggerMet(s, { type: 'rescued', count: 1 })).toBe(false);
-    s.stats.rescued = 1;
+    s.meta.stats.rescued = 1;
     expect(triggerMet(s, { type: 'rescued', count: 1 })).toBe(true);
 
     expect(triggerMet(s, { type: 'variant', key: 'chef' })).toBe(false);
-    s.found.chef = 1;
+    s.meta.found.chef = 1;
     expect(triggerMet(s, { type: 'variant', key: 'chef' })).toBe(true);
     expect(triggerMet(s, { type: 'allVariants' })).toBe(false);
-    for (const v of Object.keys(VARIANTS) as Array<keyof typeof VARIANTS>) s.found[v] = 1;
+    for (const v of Object.keys(VARIANTS) as Array<keyof typeof VARIANTS>) s.meta.found[v] = 1;
     expect(triggerMet(s, { type: 'allVariants' })).toBe(true);
 
-    s.stats.blizzardsSurvived = 1;
-    s.stats.attacksRepelled = 2;
+    s.meta.stats.blizzardsSurvived = 1;
+    s.meta.stats.attacksRepelled = 2;
     expect(triggerMet(s, { type: 'blizzards', count: 1 })).toBe(true);
     expect(triggerMet(s, { type: 'attacksRepelled', count: 3 })).toBe(false);
     s.research.push('sharpAxes');
@@ -40,7 +40,7 @@ describe('milestone triggers', () => {
     const e = new GameEngine({ seed: 1 });
     e.state.blizzard = { next: 0, active: true, end: 0.05, long: false, warned: true };
     e.tick();
-    expect(e.state.stats.blizzardsSurvived).toBe(1);
+    expect(e.state.meta.stats.blizzardsSurvived).toBe(1);
   });
 });
 

@@ -41,13 +41,13 @@ export function settingsScreen(close: () => void): Screen {
   const confirmRow = h('div', { class: 'row-buttons' });
   const askNewWinter = (): void => {
     confirmRow.replaceChildren(
-      h('p', {}, 'Start over? This wipes the city.'),
+      h('p', {}, 'Start over? This wipes everything: the city, Warmth Tokens and the Collection.'),
       h('button', { class: 'btn primary', onclick: () => (newWinter(), close()) }, 'Yes, start over'),
       h('button', { class: 'btn', onclick: resetConfirm }, 'No'),
     );
   };
   const resetConfirm = (): void => {
-    confirmRow.replaceChildren(h('button', { class: 'btn', onclick: askNewWinter }, 'New winter…'));
+    confirmRow.replaceChildren(h('button', { class: 'btn', onclick: askNewWinter }, 'Start over…'));
   };
   resetConfirm();
 

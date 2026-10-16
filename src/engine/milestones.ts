@@ -28,15 +28,15 @@ export function triggerMet(s: GameState, t: MilestoneTrigger): boolean {
     case 'jans':
       return s.jans.length >= t.count;
     case 'rescued':
-      return s.stats.rescued >= t.count;
+      return s.meta.stats.rescued >= t.count;
     case 'variant':
-      return s.found[t.key] > 0;
+      return s.meta.found[t.key] > 0;
     case 'allVariants':
-      return (Object.keys(VARIANTS) as VariantKey[]).every((v) => s.found[v] > 0);
+      return (Object.keys(VARIANTS) as VariantKey[]).every((v) => s.meta.found[v] > 0);
     case 'blizzards':
-      return s.stats.blizzardsSurvived >= t.count;
+      return s.meta.stats.blizzardsSurvived >= t.count;
     case 'attacksRepelled':
-      return s.stats.attacksRepelled >= t.count;
+      return s.meta.stats.attacksRepelled >= t.count;
     case 'research':
       return s.research.length >= t.count;
     case 'date':
@@ -54,7 +54,7 @@ function localDate(ymd: string): Date | null {
 export function checkMilestones(s: GameState, defs: MilestoneDef[], now: Date): string[] {
   return defs
     .filter((d) => {
-      if (s.milestones.includes(d.id)) return false;
+      if (s.meta.milestones.includes(d.id)) return false;
       if (d.unlockDate !== undefined) {
         const from = localDate(d.unlockDate);
         if (!from || now < from) return false;
