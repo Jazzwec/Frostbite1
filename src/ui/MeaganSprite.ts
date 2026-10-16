@@ -12,6 +12,8 @@ const BOB_SPEED = 0.018;
 export class MeaganSprite extends Phaser.GameObjects.Container {
   private readonly figure: Phaser.GameObjects.Container;
   private readonly bagLabel: Phaser.GameObjects.Text;
+  private readonly hp: Phaser.GameObjects.Graphics;
+  private hpShown = 1;
   private bagText = '';
   private walkTime = 0;
 
@@ -51,7 +53,8 @@ export class MeaganSprite extends Phaser.GameObjects.Container {
       .setOrigin(0.5, 1)
       .setVisible(false);
 
-    this.add([shadow, this.figure, this.bagLabel]);
+    this.hp = scene.add.graphics();
+    this.add([shadow, this.figure, this.hp, this.bagLabel]);
     scene.add.existing(this);
   }
 
@@ -67,6 +70,18 @@ export class MeaganSprite extends Phaser.GameObjects.Container {
     this.walkTime = moving ? this.walkTime + deltaMs : 0;
     this.figure.y = -Math.abs(Math.sin(this.walkTime * BOB_SPEED)) * BOB_HEIGHT;
     this.setDepth(this.y);
+  }
+
+  /** HP bar while she's hurt; greyed out while injured (she can't move until the attack ends). */
+  setHealth(fraction: number, injured: boolean): void {
+    const f = Phaser.Math.Clamp(fraction, 0, 1);
+    this.figure.setAlpha(injured ? 0.5 : 1);
+    if (f === this.hpShown) return;
+    this.hpShown = f;
+    this.hp.clear();
+    if (f >= 1) return;
+    this.hp.fillStyle(COLOURS.ink, 0.8).fillRect(-37, -122, 74, 12);
+    this.hp.fillStyle(injured ? COLOURS.slate : COLOURS.danger, 1).fillRect(-35, -120, 70 * f, 8);
   }
 
   /** Bag contents plus how full it is, e.g. "12 Wood · 3 Mat (15/30)". Hidden when empty. */

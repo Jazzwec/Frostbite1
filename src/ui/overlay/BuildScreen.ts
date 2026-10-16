@@ -1,10 +1,10 @@
 // Build tab: every building with its level, effect, next cost and delivery progress, and a Go button that sends
 // Meagan there. Building itself still happens on the map by carrying.
 import { buildingEffect, buildingName } from '../../content';
-import { BUILDINGS } from '../../engine/balance';
-import { buildingCost, isUnlocked } from '../../engine/economy';
+import { BUILDINGS, GEAR } from '../../engine/balance';
+import { buildingCost, canAfford, gearCost, isUnlocked, kitCost } from '../../engine/economy';
 import { siteIndexOf } from '../../engine/map';
-import type { BuildingKey, StoredResource } from '../../engine/types';
+import type { BuildingKey, GearKey, StoredResource } from '../../engine/types';
 import { engine } from '../../game/runtime';
 import { RESOURCE_LABELS, formatCost, formatNumber } from '../format';
 import { h } from './dom';
@@ -30,7 +30,9 @@ export function buildScreen(close: () => void): Screen {
       return { key, site, group, level, maxed, progress };
     });
     rows.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
-    const next = JSON.stringify([rows.map((r) => [r.key, r.group, r.level, r.progress && progressText(r.key, r.level, r.progress)]), freePlot]);
+    // Gear buttons depend on what's in the piles, so the Barracks adds them to the signature.
+    const armoury = s.buildings.barracks > 0 ? [s.gear, s.resources, s.jans.filter((j) => j.job === 'guard').map((j) => j.hasKit)] : null;
+    const next = JSON.stringify([rows.map((r) => [r.key, r.group, r.level, r.progress && progressText(r.key, r.level, r.progress)]), freePlot, armoury]);
     if (next === sig) return;
     sig = next;
 
@@ -57,10 +59,55 @@ export function buildScreen(close: () => void): Screen {
             h('div', { class: 'detail' }, buildingEffect(r.key)),
             r.maxed ? null : h('div', { class: 'cost' }, r.group === 'placed' && r.level > 0 ? `Next level: ${formatCost(cost)}` : `Costs ${formatCost(cost)}`),
             r.progress ? progressBar(r.key, r.level, r.progress) : null,
+            r.key === 'barracks' && r.level > 0 ? armouryBlock() : null,
           ),
           action,
         );
       }),
+    );
+  }
+
+  /** Weapons, Armour and guard kits, crafted at the Barracks from the piles. */
+  function armouryBlock(): HTMLElement {
+    const s = engine.state;
+    const craft = (label: string, detail: string, can: boolean, act: () => boolean): HTMLElement =>
+      h(
+        'div',
+        { class: 'gear-row' },
+        h('div', { class: 'job-info' }, h('div', {}, label), h('div', { class: 'cost' }, detail)),
+        h(
+          'button',
+          {
+            class: 'btn',
+            disabled: !can,
+            onclick: () => {
+              act();
+              refresh();
+            },
+          },
+          'Craft',
+        ),
+      );
+    const gearRow = (key: GearKey, label: string): HTMLElement => {
+      const level = s.gear[key];
+      if (level >= GEAR.max) return h('div', { class: 'gear-row' }, h('div', {}, `${label} Lv ${level} · max`));
+      const cost = gearCost(level);
+      return craft(`${label} Lv ${level} → ${level + 1}`, formatCost(cost), canAfford(s, cost), () => engine.buyGear(key));
+    };
+    const guards = s.jans.filter((j) => j.job === 'guard');
+    const kitted = guards.filter((j) => j.hasKit).length;
+    const kit = kitCost(s.gear);
+    return h(
+      'div',
+      { class: 'armoury' },
+      gearRow('weapons', 'Weapons'),
+      gearRow('armour', 'Armour'),
+      craft(
+        `Guard kits: ${kitted} of ${guards.length} guards`,
+        guards.length > kitted ? formatCost(kit) : 'Every guard has one',
+        guards.length > kitted && canAfford(s, kit),
+        () => engine.buyKit(),
+      ),
     );
   }
 

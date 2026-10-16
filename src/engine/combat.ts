@@ -180,7 +180,7 @@ export function updateAttacks(s: GameState, dt: number, ctx: TickContext): void 
     const materials = loot.materials * scale;
     addCapped(s, 'food', food);
     addCapped(s, 'materials', materials);
-    ctx.emit({ type: 'animalKilled', kind: a.kind, food, materials });
+    ctx.emit({ type: 'animalKilled', kind: a.kind, food, materials, at: { x: a.x, y: a.y } });
     return false;
   });
 
@@ -226,7 +226,7 @@ function animalStep(s: GameState, a: Animal, dt: number, ctx: TickContext): bool
       if (a.scareProgress >= ATTACK.scareSeconds) {
         const i = s.jans.findIndex((j) => j.id === a.targetJanId);
         const [jan] = s.jans.splice(i, 1);
-        ctx.emit({ type: 'janScared', jan });
+        ctx.emit({ type: 'janScared', jan, at: { x: a.x, y: a.y } });
         a.targetJanId = null;
         a.hasScared = true;
       }

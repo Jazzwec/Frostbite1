@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { buildingName } from '../content';
-import { CARAVAN } from '../engine/balance';
+import { CARAVAN, MEAGAN } from '../engine/balance';
 import { buildingCost, carryLimit, heatCap } from '../engine/economy';
 import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
@@ -8,7 +8,8 @@ import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
 import { devFlags, engine, saveNow } from '../game/runtime';
 import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
-import { JOB_LABELS, formatCost } from '../ui/format';
+import { AnimalSprite } from '../ui/AnimalSprite';
+import { JOB_LABELS, formatClock, formatCost, formatNumber } from '../ui/format';
 import { HeatBar } from '../ui/HeatBar';
 import { JanSprite } from '../ui/JanSprite';
 import { MeaganSprite } from '../ui/MeaganSprite';
@@ -38,6 +39,7 @@ export class CityScene extends Phaser.Scene {
   private debug!: Phaser.GameObjects.Graphics;
   private readonly frozen = new Map<number, JanSprite>();
   private readonly jans = new Map<number, JanSprite>();
+  private readonly animals = new Map<number, AnimalSprite>();
   /** Where a just-thawed Jan starts walking from (map units), keyed by Jan id. */
   private readonly thawedAt = new Map<number, Point>();
   /** engine.loadCount when this scene was built; a different value means a save was loaded. */
@@ -51,6 +53,7 @@ export class CityScene extends Phaser.Scene {
     // create() runs again on restart, so start from empty sprite maps.
     this.frozen.clear();
     this.jans.clear();
+    this.animals.clear();
     this.thawedAt.clear();
     this.builtFor = engine.loadCount;
     this.makeTextures();
@@ -86,7 +89,9 @@ export class CityScene extends Phaser.Scene {
     for (const v of this.sites) v.sync(s);
     this.meagan.follow(toScreen(s.meagan), s.meagan.path.length > 0, delta);
     this.meagan.setBag(s.meagan.bag, carryLimit(s));
+    this.meagan.setHealth(s.meagan.hp / MEAGAN.hp, s.meagan.injured);
     this.syncJans(s, delta);
+    this.syncAnimals(s, delta);
     this.drawDebug();
   }
 
@@ -115,6 +120,16 @@ export class CityScene extends Phaser.Scene {
       const w = engine.state.waiting.find((a) => a.id === e.id);
       if (w) this.floater(above(w), 'No room!\nUpgrade the Furnace or build a Bunkhouse');
     } else if (e.type === 'caravan') this.floater(above(CARAVAN_SPOTS[3]), `A caravan of ${e.count} Jans arrived!`);
+    else if (e.type === 'attackWarn') this.notice(`Animals spotted! Here in ${formatClock(e.startsIn)}`);
+    else if (e.type === 'attackStart') this.notice(`${e.animals} animals are coming for the furnace!`);
+    else if (e.type === 'attackEnd') this.notice(e.repelled ? 'The animals ran off. Well defended!' : 'The animals got away with some supplies.');
+    else if (e.type === 'animalKilled') this.floater(above(e.at), `+${formatNumber(e.food)} Food · +${formatNumber(e.materials)} Mat`);
+    else if (e.type === 'janScared') this.floater(above(e.at), 'A Jan ran off for good!');
+    else if (e.type === 'meaganInjured') this.floater(above(engine.state.meagan), 'Ouch! Meagan needs a rest');
+    else if (e.type === 'furnaceHit') {
+      const lost = [`−${formatNumber(e.wood)} Wood`, `−${formatNumber(e.food)} Food`, e.jansLost > 0 ? `${e.jansLost} Jan${e.jansLost > 1 ? 's' : ''} fled` : ''];
+      this.floater(this.sites[0].top, `Raided! ${lost.filter(Boolean).join(' · ')}`);
+    }
     else if (e.type === 'upgradeStarted') {
       const cost = buildingCost(e.building, engine.state.buildings[e.building]);
       this.floater(this.sites[e.site].top, `Bring ${formatCost(cost)}`);
@@ -128,6 +143,11 @@ export class CityScene extends Phaser.Scene {
 
   private syncHeat(): void {
     this.heatBar.setValue(engine.state.heat / heatCap(engine.state));
+  }
+
+  /** A message near the top of the map, for city-wide news. */
+  private notice(text: string): void {
+    this.floater({ x: GAME_WIDTH / 2, y: 330 }, text);
   }
 
   private tapMarker(at: Point): void {
@@ -186,11 +206,37 @@ export class CityScene extends Phaser.Scene {
         this.thawedAt.delete(jan.id);
         this.jans.set(jan.id, (sprite = new JanSprite(this, toScreen(from), false)));
       }
+      // In a fight, guards follow their combat units instead of standing at their spot.
+      const unit = jan.job === 'guard' && s.attack.active ? s.attack.guards.find((g) => g.janId === jan.id) : undefined;
+      sprite.setKnockedOut(unit?.knockedOut ?? false);
+      if (unit) {
+        sprite.target = null;
+        sprite.walk([toScreen(unit)]);
+        sprite.tick(delta);
+        continue;
+      }
       if (!sprite.target || sprite.target.x !== spot.x || sprite.target.y !== spot.y) {
         sprite.target = spot;
         sprite.walk(findPath(engine.nav, toWorld(sprite), spot).map(toScreen));
       }
       sprite.tick(delta);
+    }
+  }
+
+  /** Animals in an attack, with HP bars. */
+  private syncAnimals(s: GameState, delta: number): void {
+    const alive = new Set(s.attack.animals.map((a) => a.id));
+    for (const [id, sprite] of this.animals) {
+      if (!alive.has(id)) {
+        sprite.destroy();
+        this.animals.delete(id);
+      }
+    }
+    for (const a of s.attack.animals) {
+      let sprite = this.animals.get(a.id);
+      if (!sprite) this.animals.set(a.id, (sprite = new AnimalSprite(this, toScreen(a), a.kind)));
+      sprite.follow(toScreen(a), delta);
+      sprite.setHealth(a.hp / a.maxHp);
     }
   }
 

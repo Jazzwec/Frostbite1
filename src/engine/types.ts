@@ -176,8 +176,8 @@ export type EngineEvent =
   | { type: 'attackWarn'; startsIn: number }
   | { type: 'attackStart'; animals: number }
   | { type: 'attackEnd'; repelled: boolean }
-  | { type: 'animalKilled'; kind: AnimalKind; food: number; materials: number }
-  | { type: 'janScared'; jan: Jan }
+  | { type: 'animalKilled'; kind: AnimalKind; food: number; materials: number; at: Point }
+  | { type: 'janScared'; jan: Jan; at: Point }
   | { type: 'furnaceHit'; kind: AnimalKind; wood: number; food: number; heat: number; jansLost: number }
   | { type: 'meaganInjured' }
   | { type: 'guardKnockedOut'; janId: number }

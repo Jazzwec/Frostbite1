@@ -288,3 +288,16 @@
 .unfound .portrait {
   opacity: 0.45;
 }
+.armoury {
+  margin-top: calc(var(--u) * 14);
+  padding: calc(var(--u) * 6) calc(var(--u) * 16);
+  border-radius: calc(var(--u) * 16);
+  background: var(--snow);
+}
+.gear-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 12);
+  padding: calc(var(--u) * 8) 0;
+  font-size: calc(var(--u) * 26);
+}

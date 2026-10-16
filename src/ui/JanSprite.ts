@@ -57,6 +57,11 @@ export class JanSprite extends Phaser.GameObjects.Container {
     scene.add.existing(this);
   }
 
+  /** A guard knocked out in a fight lies down, greyed, until the attack ends. */
+  setKnockedOut(out: boolean): void {
+    this.figure.setAngle(out ? -90 : 0).setAlpha(out ? 0.5 : 1);
+  }
+
   /** Caravan patience left (0..1), or null for no ring. */
   setTimer(fraction: number | null): void {
     if (!this.timer) return;
