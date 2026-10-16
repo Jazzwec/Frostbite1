@@ -42,3 +42,8 @@ new Banner(layer);
 new MilestoneCards(layer, () => sfx.milestone());
 wireSound(() => engine.state.blizzard.active);
 showWelcome(layer, lastSeen);
+
+// Offline once installed (production only; in dev a service worker would cache stale modules).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => void navigator.serviceWorker.register('./sw.js'));
+}
