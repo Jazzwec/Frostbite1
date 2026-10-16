@@ -4,6 +4,7 @@
   "editModel": "gpt-image-2.5-sunburst",
   "quality": "medium",
   "budget": 30,
+  "maxSize": 512,
   "style": "Game sprite for a cosy mobile survival game. Flat, chunky cartoon style with thick dark navy outlines (#1A2938), simple cel shading, rounded friendly shapes. Snowy winter palette: icy blues, soft whites and slate greys, with warm ember-orange (#DD5B1A) and amber (#F6B04A) accents. One subject only, centred, whole subject in frame with a little margin, seen from the front at a slight top-down angle. No text, no letters, no ground, no cast shadow, no background scenery: transparent background.",
   "assets": [
     { "id": "furnace", "size": "1024x1024", "prompt": "A big round stone furnace: grey stone blocks, a snow-capped top, an arched iron firebox door glowing with orange fire, a tall stone chimney on the right with a wisp of smoke." },

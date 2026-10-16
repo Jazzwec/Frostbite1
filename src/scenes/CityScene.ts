@@ -45,6 +45,8 @@ const HEAT_STAGES = [
 /** Width of the generated furnace art, and its tint from cold to roaring (one per heat stage). */
 const FURNACE_ART_WIDTH = 360;
 const FURNACE_TINTS = [0x9fb3c6, 0xc9d3dd, 0xe3e8ee, 0xf4f4f4, 0xffffff];
+/** Where the chimney mouth is in the furnace art, as fractions of its cropped size (matches src/assets/art/furnace.png). */
+const FURNACE_ART_CHIMNEY = { x: 0.855, y: 0.19 };
 /** Height of a generated pine tree at scale 1, and width of the scrap heap art. */
 const PINE_ART_HEIGHT = 125;
 const SCRAP_ART_WIDTH = 150;
@@ -523,7 +525,10 @@ export class CityScene extends Phaser.Scene {
       const art = artImage(this, 'furnace', x, base, { width: FURNACE_ART_WIDTH }).setDepth(base);
       this.furnaceArt = art;
       this.fireHolder = this.add.container(x, base - 80);
-      chimney = { x: x + art.displayWidth * 0.22, y: base - art.displayHeight + 10 };
+      chimney = {
+        x: x + art.displayWidth * (FURNACE_ART_CHIMNEY.x - 0.5),
+        y: base - art.displayHeight * (1 - FURNACE_ART_CHIMNEY.y),
+      };
     } else chimney = this.drawFurnaceShape(x, base);
 
     // Embers drifting out of the chimney, faster the hotter the fire.

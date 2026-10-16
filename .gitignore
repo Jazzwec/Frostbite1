@@ -137,3 +137,5 @@ dist
 
 # Rejected generated art (scripts/gen-art.mjs --redo)
 art/rejects/
+# Full-size generated art; the game uses the shrunk copies in src/assets/art
+art/originals/
