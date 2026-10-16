@@ -20,6 +20,17 @@ export function formatRate(n: number): string {
   return n < 10 ? (Math.round(n * 10) / 10).toString() : formatNumber(n);
 }
 
+/** How long she was away: "a moment", "12 minutes", "2 hours 5 minutes", "3 days". */
+export function formatAway(ms: number): string {
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return 'a moment';
+  const plural = (n: number, unit: string): string => `${n} ${unit}${n === 1 ? '' : 's'}`;
+  if (min < 60) return plural(min, 'minute');
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return min % 60 ? `${plural(hours, 'hour')} ${plural(min % 60, 'minute')}` : plural(hours, 'hour');
+  return plural(Math.floor(hours / 24), 'day');
+}
+
 /** 150 → "2:30". */
 export function formatClock(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds));

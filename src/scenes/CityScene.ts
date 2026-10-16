@@ -1,15 +1,16 @@
 import Phaser from 'phaser';
-import { buildingName } from '../content';
+import { buildingName, chatterLine, rescueLine } from '../content';
 import { MEAGAN } from '../engine/balance';
 import { carryLimit, caravanWait, heatCap, nextCost } from '../engine/economy';
 import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
 import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
+import { bus } from '../game/bus';
 import { devFlags, engine, saveNow } from '../game/runtime';
 import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
 import { AnimalSprite } from '../ui/AnimalSprite';
-import { JOB_LABELS, formatClock, formatCost, formatNumber } from '../ui/format';
+import { JOB_LABELS, formatCost, formatNumber } from '../ui/format';
 import { HeatBar } from '../ui/HeatBar';
 import { JanSprite } from '../ui/JanSprite';
 import { MeaganSprite } from '../ui/MeaganSprite';
@@ -25,6 +26,9 @@ const FURNACE_Y = ORIGIN.y; // base of the furnace
 const GATHER_TAP_RADIUS = 100;
 /** Tap radius around a frozen Jan's body (≥ 44 pt on the phone). */
 const FROZEN_TAP_RADIUS = 55;
+/** Idle chatter: one line over a random working Jan every 20–30 s while the city is calm (brief). */
+const CHATTER_MIN_MS = 20_000;
+const CHATTER_MAX_MS = 30_000;
 /** Jans sharing a job stand in a little group around its work spot. */
 const CROWD = { perRow: 4, dx: 26, dy: 24 } as const;
 
@@ -42,6 +46,9 @@ export class CityScene extends Phaser.Scene {
   private readonly animals = new Map<number, AnimalSprite>();
   /** Where a just-thawed Jan starts walking from (map units), keyed by Jan id. */
   private readonly thawedAt = new Map<number, Point>();
+  /** What a just-thawed Jan says once his sprite exists, keyed by Jan id. */
+  private readonly thawLine = new Map<number, string>();
+  private chatterIn = CHATTER_MIN_MS;
   /** engine.loadCount when this scene was built; a different value means a save was loaded. */
   private builtFor = 0;
 
@@ -55,6 +62,7 @@ export class CityScene extends Phaser.Scene {
     this.jans.clear();
     this.animals.clear();
     this.thawedAt.clear();
+    this.thawLine.clear();
     this.builtFor = engine.loadCount;
     this.makeTextures();
     this.drawBackground();
@@ -82,7 +90,10 @@ export class CityScene extends Phaser.Scene {
       return;
     }
     engine.advance(delta);
-    for (const e of engine.drainEvents()) this.onEvent(e);
+    for (const e of engine.drainEvents()) {
+      this.onEvent(e);
+      bus.emit(e);
+    }
 
     const s = engine.state;
     this.syncHeat();
@@ -92,6 +103,7 @@ export class CityScene extends Phaser.Scene {
     this.meagan.setHealth(s.meagan.hp / MEAGAN.hp, s.meagan.injured);
     this.syncJans(s, delta);
     this.syncAnimals(s, delta);
+    this.chatter(s, delta);
     this.drawDebug();
   }
 
@@ -115,14 +127,12 @@ export class CityScene extends Phaser.Scene {
     if (e.type === 'plotReached') this.picker.open(e.site);
     else if (e.type === 'rescued') {
       this.thawedAt.set(e.jan.id, e.from);
+      this.thawLine.set(e.jan.id, rescueLine(e.jan.variant));
       this.floater(above(e.from), `Jan thawed! → ${JOB_LABELS[e.jan.job]}`);
     } else if (e.type === 'rescueBlocked') {
       const w = engine.state.waiting.find((a) => a.id === e.id);
       if (w) this.floater(above(w), 'No room!\nUpgrade the Furnace or build a Bunkhouse');
     } else if (e.type === 'caravan') this.floater(above(CARAVAN_SPOTS[3]), `A caravan of ${e.count} Jans arrived!`);
-    else if (e.type === 'attackWarn') this.notice(`Animals spotted! Here in ${formatClock(e.startsIn)}`);
-    else if (e.type === 'attackStart') this.notice(`${e.animals} animals are coming for the furnace!`);
-    else if (e.type === 'attackEnd') this.notice(e.repelled ? 'The animals ran off. Well defended!' : 'The animals got away with some supplies.');
     else if (e.type === 'animalKilled') this.floater(above(e.at), `+${formatNumber(e.food)} Food · +${formatNumber(e.materials)} Mat`);
     else if (e.type === 'janScared') this.floater(above(e.at), 'A Jan ran off for good!');
     else if (e.type === 'meaganInjured') this.floater(above(engine.state.meagan), 'Ouch! Meagan needs a rest');
@@ -143,11 +153,6 @@ export class CityScene extends Phaser.Scene {
 
   private syncHeat(): void {
     this.heatBar.setValue(engine.state.heat / heatCap(engine.state));
-  }
-
-  /** A message near the top of the map, for city-wide news. */
-  private notice(text: string): void {
-    this.floater({ x: GAME_WIDTH / 2, y: 330 }, text);
   }
 
   private tapMarker(at: Point): void {
@@ -205,6 +210,9 @@ export class CityScene extends Phaser.Scene {
         const from = this.thawedAt.get(jan.id) ?? spot;
         this.thawedAt.delete(jan.id);
         this.jans.set(jan.id, (sprite = new JanSprite(this, toScreen(from), false)));
+        const line = this.thawLine.get(jan.id);
+        if (line) sprite.say(line);
+        this.thawLine.delete(jan.id);
       }
       // In a fight, guards follow their combat units instead of standing at their spot.
       const unit = jan.job === 'guard' && s.attack.active ? s.attack.guards.find((g) => g.janId === jan.id) : undefined;
@@ -221,6 +229,16 @@ export class CityScene extends Phaser.Scene {
       }
       sprite.tick(delta);
     }
+  }
+
+  /** Now and then, a working Jan says something, but only while the city is calm. */
+  private chatter(s: GameState, delta: number): void {
+    this.chatterIn -= delta;
+    if (this.chatterIn > 0) return;
+    this.chatterIn = Phaser.Math.Between(CHATTER_MIN_MS, CHATTER_MAX_MS);
+    if (s.blizzard.active || s.attack.active) return;
+    const idleSprites = [...this.jans.values()].filter((j) => !j.walking && !j.speaking);
+    if (idleSprites.length > 0) Phaser.Utils.Array.GetRandom(idleSprites).say(chatterLine());
   }
 
   /** Animals in an attack, with HP bars. */

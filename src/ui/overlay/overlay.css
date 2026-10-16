@@ -365,3 +365,39 @@
     opacity: 1;
   }
 }
+
+/* ---------- Banner ---------- */
+
+.banner {
+  position: absolute;
+  left: calc(var(--u) * 40);
+  right: calc(var(--u) * 40);
+  top: calc(var(--u) * 220);
+  padding: calc(var(--u) * 18) calc(var(--u) * 24);
+  border-radius: calc(var(--u) * 24);
+  border: calc(var(--u) * 5) solid var(--ink);
+  background: var(--ice);
+  text-align: center;
+  font-size: calc(var(--u) * 28);
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(calc(var(--u) * -30));
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.banner.show {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.banner.cold {
+  background: var(--frost-soft);
+}
+.banner.alert {
+  background: var(--ember);
+  color: var(--ice);
+}
+.welcome .tip {
+  font-size: calc(var(--u) * 24);
+  color: var(--slate);
+}

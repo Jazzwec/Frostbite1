@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Point } from '../engine/types';
-import { COLOURS } from '../theme';
+import { COLOURS, CSS, FONT } from '../theme';
 
 /** Jans walking to work is cosmetic (output starts at assignment), so their pace lives here, not in balance.ts. */
 const WALK_SPEED = 120;
@@ -8,6 +8,9 @@ const BOB_HEIGHT = 5;
 const BOB_SPEED = 0.018;
 /** While working, a gentle bob every so often. */
 const WORK_BOB_SPEED = 0.006;
+/** Speech bubbles float above everything on the map, just under the HUD. */
+const BUBBLE_DEPTH = 9500;
+const BUBBLE_WIDTH = 300;
 
 /**
  * Placeholder Jan: beanie, beard, brown coat. Frozen Jans stand in an ice block, with a ring that empties
@@ -20,6 +23,8 @@ export class JanSprite extends Phaser.GameObjects.Container {
   private readonly timer: Phaser.GameObjects.Graphics | null;
   private path: Point[] = [];
   private clock = Math.random() * 1000;
+  private bubble: Phaser.GameObjects.Text | null = null;
+  private bubbleUntil = 0;
 
   constructor(scene: Phaser.Scene, at: Point, frozen: boolean) {
     super(scene, at.x, at.y);
@@ -76,8 +81,46 @@ export class JanSprite extends Phaser.GameObjects.Container {
     this.path = path;
   }
 
+  /** Say something in a speech bubble above his head for a few seconds. */
+  say(text: string, ms = 3500): void {
+    this.bubble?.destroy();
+    this.bubble = this.scene.add
+      .text(this.x, this.y - 130, text, {
+        fontFamily: FONT,
+        fontSize: '24px',
+        color: CSS.ink,
+        backgroundColor: CSS.ice,
+        padding: { x: 12, y: 8 },
+        align: 'center',
+        wordWrap: { width: BUBBLE_WIDTH },
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(BUBBLE_DEPTH);
+    this.bubbleUntil = this.clock + ms;
+  }
+
+  get speaking(): boolean {
+    return this.bubble !== null;
+  }
+
+  get walking(): boolean {
+    return this.path.length > 0;
+  }
+
+  override destroy(fromScene?: boolean): void {
+    this.bubble?.destroy();
+    this.bubble = null;
+    super.destroy(fromScene);
+  }
+
   tick(deltaMs: number): void {
     this.clock += deltaMs;
+    if (this.bubble) {
+      if (this.clock >= this.bubbleUntil) {
+        this.bubble.destroy();
+        this.bubble = null;
+      } else this.bubble.setPosition(this.x, this.y - 130);
+    }
     let step = (WALK_SPEED * deltaMs) / 1000;
     const walking = this.path.length > 0;
     while (step > 0 && this.path.length > 0) {

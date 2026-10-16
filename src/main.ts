@@ -1,12 +1,15 @@
 import Phaser from 'phaser';
 import './style.css';
 import './ui/overlay/overlay.css';
+import { lastSeen } from './game/runtime';
 import { CityScene } from './scenes/CityScene';
 import { CSS, GAME_HEIGHT, GAME_WIDTH } from './theme';
 import { buildScreen } from './ui/overlay/BuildScreen';
 import { collectionScreen } from './ui/overlay/CollectionScreen';
 import { jansScreen } from './ui/overlay/JansScreen';
+import { Banner } from './ui/overlay/Banner';
 import { MilestoneCards } from './ui/overlay/MilestoneCards';
+import { showWelcome } from './ui/overlay/Welcome';
 import { settingsScreen } from './ui/overlay/SettingsScreen';
 import { Shell } from './ui/overlay/Shell';
 
@@ -31,4 +34,7 @@ new Shell(game, {
   settings: settingsScreen,
 });
 
-new MilestoneCards(document.getElementById('ui')!);
+const layer = document.getElementById('ui')!;
+new Banner(layer);
+new MilestoneCards(layer);
+showWelcome(layer, lastSeen);
