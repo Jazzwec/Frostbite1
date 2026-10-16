@@ -57,13 +57,17 @@ Five resources, and only Heat can run out with consequences. Everything else jus
 
 | Resource | Produced by | Spent on | Cap | Notes |
 | --- | --- | --- | --- | --- |
-| Heat | Burning Wood at the Furnace | Drains automatically; each Jan adds to drain | Furnace level × 100 | Below 30%: jobs at half speed. At 0: one Jan leaves per minute until heat returns |
-| Wood | Chopping | Furnace burn, most buildings | Lumber Yard level | The pacing resource; wood income vs burn rate is the core tension |
-| Food | Hunting | Each Jan eats 1/min; Kitchen upgrades | Storehouse level | Short food = Jans work 25% slower. Never kills |
-| Materials | Building job, Scavenging after Tier 2 | Higher-tier buildings, furnace upgrades | Storehouse level | The slow resource that gates each tier |
+| Heat | Burning Wood at the Furnace | Drains automatically; each Jan and each building level adds to drain | Furnace level × 100 | Below 30%: jobs at half speed. At 0: one Jan leaves per minute until heat returns |
+| Wood | Chopping; Meagan in the forest | Furnace burn, most buildings, gear | 300 + 50 per Lumber Yard level, × Storehouse | The pacing resource; wood income vs burn rate is the core tension |
+| Food | Hunting; Meagan at the hunting grounds; animal kills | Each Jan eats 1/min | 150 × Storehouse | Short food = Jans work 25% slower. Never kills |
+| Materials | Building job, Scavenging after Tier 2, animal kills | Higher-tier buildings, furnace upgrades, gear | 100 × Storehouse | The slow resource that gates each tier |
 | Knowledge | Research | Permanent multipliers in the Research tree | None | Only resource that is never wasted; always a good sink for spare Jans |
 
 A sixth resource, Warmth Tokens, is earned only at prestige and spent on permanent bonuses. It never resets.
+
+Storehouse multiplies every Wood, Food and Materials cap by 1.25 per level (compounding).
+
+**Start of a winter.** The city starts empty: 0 Jans, 0 of every resource and a cold furnace (heat 0). Furnace, Lumber Yard and Hunting Lodge are at Lv 1. Meagan rescues the first Jan herself and gathers the first resources by hand. Like the ads, she works automatically whenever she walks near the forest (5 Wood/s) or the hunting grounds (3 Food/s). Cold and hunger don't slow her.
 
 ## Jobs
 
@@ -75,7 +79,10 @@ Five jobs, each tied to one building that sets its rate. Output per Jan is the b
 | Hunting | Hunting Lodge | Food | 0.6 / s | Start | +15% rate |
 | Building | Workshop | Materials | 0.1 / s | Furnace Lv 2 | +20% rate |
 | Research | Research Hut | Knowledge | 0.05 / s | Furnace Lv 3 | +20% rate |
-| Scavenging | Expedition Post | Random Wood, Food or Materials in bursts | 1 burst / 90 s | Tier 2 | Shorter interval, bigger bursts |
+| Scavenging | Expedition Post | Random Wood, Food or Materials in bursts (40 / 25 / 8, Wood twice as likely) | 1 burst / 90 s | Tier 2 | Interval ×0.92, bursts ×1.2 |
+| Guarding | Barracks | Defence against animal attacks (30 HP, 3 damage/s each) | — | Furnace Lv 2 | +15% guard strength |
+
+Rate upgrades compound: a job's rate per Jan is base × growth^(level − 1).
 
 Idle Jans still eat and still add to heat drain, so the game nudges players to assign everyone. A one-tap "auto-assign" that fills jobs by current need unlocks early in Tier 2 so the late game does not become micromanagement.
 
@@ -85,7 +92,7 @@ The Furnace is the tier gate: each Furnace level raises the Jan cap and unlocks 
 
 | Building | Role | Max level | Jan cap effect | Unlocks |
 | --- | --- | --- | --- | --- |
-| Furnace | Heat cap and burn efficiency | 10 | +4 Jans per level | Each level opens new buildings and Jan variants |
+| Furnace | Heat cap; +5% heat per Wood per level; draws stronger animal attacks | 10 | +4 Jans per level | Each level opens new buildings and Jan variants |
 | Lumber Yard | Chopping rate and Wood cap | 25 | — | — |
 | Hunting Lodge | Hunting rate | 25 | — | — |
 | Storehouse | Food and Materials cap | 15 | — | — |
@@ -94,8 +101,12 @@ The Furnace is the tier gate: each Furnace level raises the Jan cap and unlocks 
 | Research Hut | Research rate | 20 | — | Furnace Lv 3; unlocks Spreadsheet Jan |
 | Bunkhouse | Jan cap without raising heat drain | 10 | +2 Jans per level | Furnace Lv 3 |
 | Expedition Post | Scavenging | 10 | — | Tier 2 (Furnace Lv 4) |
-| Watchtower | Blizzard warning time, longer per level | 5 | — | Tier 2 |
+| Watchtower | +1 min blizzard warning and +15 s attack warning per level; arrows from Lv 5 | 10 | — | Tier 2 |
 | Hot Springs | Heat drain down 10% per level | 5 | — | Tier 3 (Furnace Lv 7) |
+| Barracks | Guarding rate; Weapons, Armour and guard kits are crafted here | 20 | — | Furnace Lv 2 |
+| Signal Beacon | Caravans come 8% sooner per level | 10 | — | Furnace Lv 2 |
+
+Every level of every building except the Furnace adds 0.05 heat/s to the drain, so growth always leans on the furnace.
 
 Tiers are just Furnace level bands: Tier 1 is Furnace 1 to 3, Tier 2 is 4 to 6, Tier 3 is 7 to 10. Each tier changes the city's look (snow depth, lights, decorations) so progress is visible without reading numbers.
 
@@ -109,18 +120,20 @@ Every repeatable cost follows one formula, so balancing is a matter of tuning a 
 \text{cost}(n) = \text{base} \times \text{growth}^{\,n}
 ```
 
-where n is the number already owned. Starting constants, all to be tuned in the simulator before any game code is written:
+where n is the number of upgrades already bought (level minus the starting level, so the Furnace's first upgrade is n = 0). Starting constants, all to be tuned in the simulator before any game code is written:
 
 | Item | Base cost | Growth | Currency |
 | --- | --- | --- | --- |
 | Lumber Yard, Hunting Lodge | 15 Wood | 1.12 | Wood |
 | Storehouse, Kitchen | 40 Wood + 5 Materials | 1.15 | Wood, Materials |
-| Workshop, Research Hut | 60 Wood + 10 Materials | 1.15 | Wood, Materials |
-| Bunkhouse, Watchtower, Hot Springs | 120 Wood + 30 Materials | 1.25 | Wood, Materials |
-| Furnace level | 100 Wood + 20 Materials | 1.8 | Wood, Materials |
+| Workshop, Research Hut, Barracks | 60 Wood + 10 Materials | 1.15 | Wood, Materials |
+| Bunkhouse, Watchtower, Hot Springs, Expedition Post, Signal Beacon | 120 Wood + 30 Materials | 1.25 | Wood, Materials |
+| Furnace level | 100 Wood + 20 Materials (Lv 1→2 is Wood only, before Materials exist) | 1.8 | Wood, Materials |
+| Weapons, Armour level | 50 Wood + 15 Materials | 1.3 | Wood, Materials |
+| Guard kit | 20 Wood + 5 Materials | 1.3 per Weapons + Armour level | Wood, Materials |
 | Research tree node | 10 Knowledge | 1.5 per node bought | Knowledge |
 
-Heat drain per second = 0.5 + 0.1 per Jan, reduced by Hot Springs. Each Wood burned gives 10 Heat. So a city of 20 Jans burns 0.25 Wood/s just to stand still, and a Lumber Yard at level 10 with 8 Jans chopping makes about 3.5 Wood/s. That headroom is what players spend on growth.
+Heat drain per second = 0.5 + 0.1 per Jan + 0.05 per building level, reduced by Hot Springs. Each Wood burned gives 10 Heat. So a city of 20 Jans burns 0.25 Wood/s just to stand still, and a Lumber Yard at level 10 with 8 Jans chopping makes about 3.5 Wood/s. That headroom is what players spend on growth.
 
 Target pacing for a first winter, measured by the simulator with an attentive player:
 
@@ -133,21 +146,44 @@ Target pacing for a first winter, measured by the simulator with an attentive pl
 
 There is no offline progress. The game runs only while open and pauses the moment it is backgrounded, so heat never drains between sessions and nothing is lost by closing the app. Every time in this brief is active play time, which is why the pacing is compressed compared with a typical idle game.
 
-Numbers display as 1.2K, 3.4M, 5.6B and so on from 1,000 upward; the simulator decides whether anything ever reaches B. Jan arrivals: one every 60 seconds at base, slowing as the city nears its cap, so new Jans always feel wanted.
+Numbers display as 1.2K, 3.4M, 5.6B and so on from 1,000 upward; the simulator decides whether anything ever reaches B. Jan arrivals: one every 60 seconds at base, slowing as the city nears its cap (× (1 + 2 × fill²), so 180 s at the cap), so new Jans always feel wanted. At most 3 single arrivals wait at the edge; a caravan can push that to 7.
+
+The Economy table's "Lumber Yard Lv 10 with 8 Jans makes about 3.5 Wood/s" example is off: with compounding rates that's about 3.5 Wood/s per Jan.
 
 ## Events & pressure
 
-Blizzards are the only threat and they are always announced. The game is about preparing, not reacting.
+Blizzards are always announced and are about preparing, not reacting. Animal attacks are the second threat; only a Watchtower announces them.
 
 | Event | Trigger | Effect | Counter |
 | --- | --- | --- | --- |
-| Blizzard | Every 20 to 40 minutes of active play, warned 3 minutes ahead (longer with Watchtower) | Heat drain ×3 for 2 minutes; no Jan arrivals | Stockpile Wood, move Jans to Chopping, buy Hot Springs |
-| Long Night | Once per Tier, warned 10 minutes ahead | Blizzard lasting 5 minutes | Same, and the first one is the game's tutorial for prestige pressure |
-| Jan caravan | Random, roughly once an hour | 3 to 5 Jans arrive at once, one guaranteed rare variant | Have cap free, or they wait at the edge for 10 minutes |
-| Found a cache | Random on Scavenging | A burst of Materials or a free building level | None needed |
+| Blizzard | First at 15 minutes, then every 20 to 40 minutes of active play, warned 3 minutes ahead (+1 minute per Watchtower level) | Heat drain ×3 for 2 minutes; no Jan arrivals | Stockpile Wood, move Jans to Chopping, buy Hot Springs |
+| Long Night | The first blizzard after reaching Tier 2 and Tier 3, warned 10 minutes ahead | Blizzard lasting 5 minutes | Same, and the first one is the game's tutorial for prestige pressure |
+| Jan caravan | First at 10 minutes, then every 15 to 25 minutes (8% sooner per Signal Beacon level) | 3 to 5 Jans arrive at once, one guaranteed rare variant; Jans who wandered off in the cold come back with it | Have cap free, or they wait at the edge for 10 minutes |
+| Found a cache | 5% of Scavenging bursts | 75%: 5× a Materials burst. 25%: a free level of a random built building (never the Furnace) | None needed |
+| Animal attack | Every 8 to 15 minutes from Furnace Lv 2, never during a blizzard; warned only with a Watchtower | See below | Guards, gear, Meagan, Watchtower |
 | Lost-His-Keys Jan finds something | On rescue of that variant | Small random bonus | None needed |
 
 If Heat reaches zero, one Jan wanders off into the snow each minute. They return at the next caravan, so nothing is permanently lost. The loss should sting a little and never ruin a run.
+
+### Animal attacks
+
+The furnace's warmth draws wild animals, and a bigger Furnace draws stronger ones: their HP, damage and loot grow ×1.6 per Furnace level above 2. Fights happen on the map in real time. Everyone autofights whatever is in range.
+
+- **Who comes.** Tier 1: wolf packs of 2 to 4. Tier 2: one attack in three adds a bear. Tier 3: a bear every time, and one in five is led by the Old Bear.
+
+  | Animal | HP | Damage/s | Loot (Food / Materials) | Jans scared at the furnace |
+  | --- | --- | --- | --- | --- |
+  | Wolf | 20 | 2 | 15 / 3 | 1 |
+  | Bear | 80 | 6 | 60 / 12 | 2 |
+  | Old Bear | 400 | 15 | 300 / 60 | 4 |
+
+- **How they move.** Animals spawn at the map edge and walk to the furnace (about 10 s). An animal passing within reach of a working Jan detours to them; after 3 s beside them that Jan flees for good. Each animal scares at most one Jan. Animals stop to fight any guard or Meagan who comes close.
+- **Guards.** Jans on the Guarding job wait in a ring around the furnace and move out to engage animals anywhere in the city. A guard at 0 HP is knocked out until the attack ends, not lost.
+- **Gear.** Each guard needs a kit to fight at full strength; without one they deal half damage. Weapons (+20% damage per level) and Armour (−10% losses per level) are level tracks crafted at the Barracks and apply to guards and Meagan. The higher the gear levels, the dearer each kit.
+- **Meagan** can join any fight by walking into range: 100 HP, 10 damage/s. At 0 HP she's injured and can't move, gather or rescue until the attack ends, win or lose. She heals after every attack.
+- **Watchtower.** Its levels give attack warning (15 s each). From Lv 5 it shoots arrows worth 2 guards, +1 guard per level after that.
+- **Breakthrough.** Each animal that reaches the furnace takes 15% of Wood and Food and 20% of heat, scares off Jans for good (see table), then leaves. Armour reduces all of this. Jans lost to animals are gone for good; new Jans keep arriving as usual.
+- **Reward.** Every kill drops Food and Materials.
 
 ## Prestige: A New Winter
 

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { heatCap } from '../engine/economy';
+import { engine } from '../game/runtime';
 import { COLOURS, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { HeatBar } from '../ui/HeatBar';
 
@@ -21,8 +23,16 @@ export class CityScene extends Phaser.Scene {
 
     this.heatBar = new HeatBar(this, 48, 36, GAME_WIDTH - 96);
     this.heatBar.setDepth(100);
-    // Placeholder until the engine exists (Phase 2).
-    this.heatBar.setValue(1);
+    this.syncHeat();
+  }
+
+  update(_time: number, delta: number): void {
+    engine.advance(delta);
+    this.syncHeat();
+  }
+
+  private syncHeat(): void {
+    this.heatBar.setValue(engine.state.heat / heatCap(engine.state));
   }
 
   /** Small runtime textures for particles, so there are no image assets yet. */
