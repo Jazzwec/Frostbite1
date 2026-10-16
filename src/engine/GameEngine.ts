@@ -1,5 +1,5 @@
 // The game's rules engine: owns state, runs the fixed tick, exposes player actions. No Phaser or DOM in here.
-import { BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, START, TICK_SECONDS } from './balance';
+import { BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, START, TICK_SECONDS } from './balance';
 import { updateAttacks } from './combat';
 import {
   arrivalInterval,
@@ -20,7 +20,9 @@ import {
   type Cost,
 } from './economy';
 import { addCapped, keysBonus, pickVariant, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
-import { FOREST, FURNACE, HUNTING_GROUNDS, distance } from './map';
+import { MAP_BOUNDS, MEAGAN_START, SITES, siteIndexOf } from './map';
+import { updateMeagan } from './meagan';
+import { buildGrid, findPath, type NavGrid } from './pathfinding';
 import { seededRng, type Rng } from './rng';
 import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, Point, ResourceKey } from './types';
 
@@ -37,7 +39,17 @@ export function newWinterState(): GameState {
     jans: [],
     waiting: [],
     wanderedOff: [],
-    meagan: { x: FURNACE.x, y: FURNACE.y, hp: MEAGAN.hp, injured: false },
+    meagan: {
+      x: MEAGAN_START.x,
+      y: MEAGAN_START.y,
+      hp: MEAGAN.hp,
+      injured: false,
+      path: [],
+      bag: { wood: 0, food: 0, materials: 0 },
+      goal: null,
+    },
+    fuel: 0,
+    sites: SITES.map((d) => ({ building: d.fixed ?? null, upgrading: false, progress: {} })),
     nextId: 1,
     arrivalTimer: 0,
     caravanNext: CARAVAN.firstAt,
@@ -63,11 +75,24 @@ export class GameEngine {
   private events: EngineEvent[] = [];
   private accumulator = 0;
   private paused = false;
+  private navGrid!: NavGrid;
 
   constructor(opts: EngineOptions = {}) {
     this.state = opts.state ?? newWinterState();
     this.rng = opts.rng ?? seededRng(opts.seed ?? Date.now());
     this.ctx = { rng: this.rng, emit: (e) => this.events.push(e) };
+    this.rebuildNav();
+  }
+
+  /** Walkability grid for the current buildings (read-only; the renderer draws it in debug mode). */
+  get nav(): NavGrid {
+    return this.navGrid;
+  }
+
+  /** Every site with a building (or a construction site) blocks walking. */
+  private rebuildNav(): void {
+    const obstacles = SITES.filter((_, i) => this.state.sites[i].building !== null).map((d) => d.footprint);
+    this.navGrid = buildGrid(MAP_BOUNDS, obstacles, PATH.cellSize, PATH.clearance);
   }
 
   // ---------- Time ----------
@@ -107,28 +132,21 @@ export class GameEngine {
 
     updateBlizzard(s, this.ctx);
     updateAttacks(s, dt, this.ctx);
+    updateMeagan(s, dt, this.ctx);
 
-    // Meagan gathers by hand when she's at the forest or the hunting grounds.
-    const m = s.meagan;
-    const fighting = s.attack.active && s.attack.animals.some((a) => distance(a, m) <= MEAGAN.range);
-    if (!m.injured && !fighting) {
-      if (distance(m, FOREST) <= MEAGAN.gatherRange) s.resources.wood += MEAGAN.woodPerSecond * dt;
-      if (distance(m, HUNTING_GROUNDS) <= MEAGAN.gatherRange) s.resources.food += MEAGAN.foodPerSecond * dt;
-    }
-
-    // Jan output, then eating.
+    // Jan output piles up at the producers; Jans eat from the food storage.
     s.resources.wood += jobRate(s, 'chop') * dt;
     s.resources.food += (jobRate(s, 'hunt') - foodEaten(s)) * dt;
     s.resources.materials += jobRate(s, 'build') * dt;
     s.resources.knowledge += jobRate(s, 'research') * dt;
     updateScavenging(s, dt, this.ctx, conditionMult(s));
 
-    // The furnace burns whatever Wood it needs to stay full, then drains.
+    // The furnace burns whatever delivered fuel it needs to stay full, then drains.
     const drain = heatDrain(s) * dt;
     const hpw = heatPerWood(s);
     const cap = heatCap(s);
-    const burn = Math.min(Math.max(0, s.resources.wood), Math.max(0, cap - s.heat + drain) / hpw);
-    s.resources.wood -= burn;
+    const burn = Math.min(Math.max(0, s.fuel), Math.max(0, cap - s.heat + drain) / hpw);
+    s.fuel -= burn;
     s.burnRate = burn / dt;
     s.heat = Math.min(cap, Math.max(0, s.heat + burn * hpw - drain));
 
@@ -148,11 +166,50 @@ export class GameEngine {
 
   // ---------- Actions ----------
 
-  /** The City scene reports where Meagan is. Ignored while she's injured. */
+  /** Dev teleport: put Meagan somewhere and stop her walking. Ignored while she's injured. */
   setMeaganPosition(p: Point): void {
-    if (this.state.meagan.injured) return;
-    this.state.meagan.x = p.x;
-    this.state.meagan.y = p.y;
+    const m = this.state.meagan;
+    if (m.injured) return;
+    m.x = p.x;
+    m.y = p.y;
+    m.path = [];
+    m.goal = null;
+  }
+
+  /** Walk Meagan to a map point, around buildings. False if she's injured or there's no way there. */
+  walkTo(p: Point): boolean {
+    const m = this.state.meagan;
+    if (m.injured) return false;
+    const path = findPath(this.navGrid, m, p);
+    if (path.length === 0) return false;
+    m.path = path;
+    m.goal = null;
+    return true;
+  }
+
+  /** Walk to a site; on arrival she asks what to build on a plot, or starts upgrading a building. */
+  tapSite(site: number): boolean {
+    if (!SITES[site] || !this.walkTo(SITES[site].drop)) return false;
+    this.state.meagan.goal = { kind: 'site', site };
+    return true;
+  }
+
+  /** Can this building go on an empty plot? Unlocked, not yet placed and not maxed. */
+  canPlace(key: BuildingKey): boolean {
+    const s = this.state;
+    return isUnlocked(s, key) && siteIndexOf(s, key) < 0 && s.buildings[key] < BUILDINGS[key].max;
+  }
+
+  /** Turn an empty plot into a construction site for a building; Meagan then delivers its cost. */
+  chooseBuilding(site: number, key: BuildingKey): boolean {
+    const st = this.state.sites[site];
+    if (!st || st.building !== null || !this.canPlace(key)) return false;
+    st.building = key;
+    st.upgrading = true;
+    st.progress = {};
+    this.rebuildNav();
+    this.ctx.emit({ type: 'upgradeStarted', site, building: key });
+    return true;
   }
 
   canBuy(key: BuildingKey): boolean {

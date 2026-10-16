@@ -1,0 +1,15 @@
+{
+  "furnace": { "name": "Furnace" },
+  "lumberYard": { "name": "Lumber Yard" },
+  "huntingLodge": { "name": "Hunting Lodge" },
+  "storehouse": { "name": "Storehouse" },
+  "kitchen": { "name": "Kitchen" },
+  "workshop": { "name": "Workshop" },
+  "researchHut": { "name": "Research Hut" },
+  "bunkhouse": { "name": "Bunkhouse" },
+  "expeditionPost": { "name": "Expedition Post" },
+  "watchtower": { "name": "Watchtower" },
+  "hotSprings": { "name": "Hot Springs" },
+  "barracks": { "name": "Barracks" },
+  "signalBeacon": { "name": "Signal Beacon" }
+}

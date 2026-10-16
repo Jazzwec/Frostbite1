@@ -2,7 +2,7 @@
 import { ANIMALS, ATTACK, GUARDS, MEAGAN, WATCHTOWER_ARROWS } from './balance';
 import { armourLossMult, guardDamage, tierOf, weaponsMult } from './economy';
 import { addCapped, type TickContext } from './events';
-import { FURNACE, JOB_SITES, WATCHTOWER, distance, moveTowards } from './map';
+import { FURNACE, JOB_SITES, distance, moveTowards, siteOf } from './map';
 import { between, intBetween, type Rng } from './rng';
 import type { Animal, AnimalKind, GameState, GuardUnit, Point } from './types';
 
@@ -164,7 +164,7 @@ export function updateAttacks(s: GameState, dt: number, ctx: TickContext): void 
 
   const tower = s.buildings.watchtower;
   if (tower >= WATCHTOWER_ARROWS.fromLevel) {
-    const target = nearestAnimal(at.animals, WATCHTOWER, WATCHTOWER_ARROWS.range);
+    const target = nearestAnimal(at.animals, siteOf(s, 'watchtower') ?? FURNACE, WATCHTOWER_ARROWS.range);
     if (target) {
       const guardsWorth = WATCHTOWER_ARROWS.baseGuards + (tower - WATCHTOWER_ARROWS.fromLevel);
       target.hp -= guardsWorth * guardDamageBase(s) * weapons * dt;

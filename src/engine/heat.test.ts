@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { MEAGAN } from './balance';
 import { heatCap, heatDrain, heatPerWood } from './economy';
 import { GameEngine, newWinterState } from './GameEngine';
+import { FOREST } from './map';
 import type { GameState, Jan } from './types';
 
 function withJans(s: GameState, n: number): GameState {
@@ -54,17 +56,25 @@ describe('furnace', () => {
     expect(new GameEngine({ seed: 1 }).state.heat).toBe(0);
   });
 
-  it('burns stocked Wood to fill up, then holds steady at the drain rate', () => {
+  it('burns delivered fuel to fill up, then holds steady at the drain rate', () => {
     const e = new GameEngine({ seed: 1 });
-    e.state.resources.wood = 50;
+    e.state.fuel = 50;
     e.tick(1);
     expect(e.state.heat).toBeCloseTo(100);
     // Filled 100 heat plus 0.6 drain at 10 heat per Wood.
-    expect(e.state.resources.wood).toBeCloseTo(50 - 100.6 / 10);
-    const before = e.state.resources.wood;
+    expect(e.state.fuel).toBeCloseTo(50 - 100.6 / 10);
+    const before = e.state.fuel;
     e.tick(10);
     expect(e.state.heat).toBeCloseTo(100);
-    expect(before - e.state.resources.wood).toBeCloseTo((0.6 * 10) / 10);
+    expect(before - e.state.fuel).toBeCloseTo((0.6 * 10) / 10);
+  });
+
+  it('never burns the Wood pile at the Lumber Yard', () => {
+    const e = new GameEngine({ seed: 1 });
+    e.state.resources.wood = 50;
+    e.tick(1);
+    expect(e.state.heat).toBe(0);
+    expect(e.state.resources.wood).toBe(50);
   });
 
   it('loses heat at the drain rate once Wood runs out, and never below 0', () => {
@@ -76,10 +86,14 @@ describe('furnace', () => {
     expect(e.state.heat).toBe(0);
   });
 
-  it('lets Meagan warm it up by chopping in the forest', () => {
+  it('lets Meagan warm it up by chopping in the forest and carrying the Wood back', () => {
     const e = new GameEngine({ seed: 1 });
-    e.setMeaganPosition({ x: -320, y: -260 }); // the forest
-    for (let i = 0; i < 300; i++) e.tick();
+    e.setMeaganPosition(FOREST);
+    for (let i = 0; i < 50; i++) e.tick();
+    expect(e.state.meagan.bag.wood).toBeCloseTo(MEAGAN.carryLimit);
+    expect(e.tapSite(0)).toBe(true); // the furnace
+    for (let i = 0; i < 100; i++) e.tick();
+    expect(e.state.meagan.bag.wood).toBe(0);
     expect(e.state.heat).toBeCloseTo(100);
   });
 });

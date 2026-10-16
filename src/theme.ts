@@ -13,10 +13,21 @@ export const COLOURS = {
   ember: 0xdd5b1a,
   emberDeep: 0xb8460f,
   emberGlow: 0xf6b04a,
+  pine: 0x2f5d50,
+  timber: 0x8b5e3c,
+  skin: 0xf1c7a1,
+  hair: 0x6b3f2a,
+  parka: 0x3a86a6,
+  danger: 0xd9534f,
 } as const;
+
+/** Roof colours for placeholder buildings, picked per building. */
+export const ROOFS = [0xb8460f, 0x3a86a6, 0x586a7c, 0x8b5e3c, 0x2f5d50, 0x9b4f8f] as const;
 
 export const CSS = {
   ink: '#1A2938',
+  ice: '#F5F9FB',
+  ember: '#DD5B1A',
   slate: '#586A7C',
   snow: '#E4ECF2',
 } as const;

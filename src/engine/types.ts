@@ -28,6 +28,14 @@ export interface Point {
   y: number;
 }
 
+/** Axis-aligned rectangle in map units; (x, y) is the top-left corner. */
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface Jan {
   id: number;
   variant: VariantKey;
@@ -77,6 +85,22 @@ export interface Meagan extends Point {
   hp: number;
   /** Injured Meagan can't move or gather until the attack ends. */
   injured: boolean;
+  /** Waypoints still to walk, nearest first. */
+  path: Point[];
+  /** Resources she is carrying. */
+  bag: Record<StoredResource, number>;
+  /** The site she was sent to; its action runs when she arrives. */
+  goal: { kind: 'site'; site: number } | null;
+}
+
+/** One building spot on the map (see SITES in map.ts). */
+export interface SiteState {
+  /** null = an empty plot. */
+  building: BuildingKey | null;
+  /** Accepting deliveries towards its next level (always true while under construction). */
+  upgrading: boolean;
+  /** Resources delivered towards the next level. */
+  progress: Partial<Record<StoredResource, number>>;
 }
 
 export interface BlizzardState {
@@ -110,6 +134,10 @@ export interface GameState {
   /** Variants of Jans who wandered off in the cold; they return with the next caravan. */
   wanderedOff: VariantKey[];
   meagan: Meagan;
+  /** Wood Meagan has delivered into the furnace, burned to make heat. */
+  fuel: number;
+  /** Aligned with SITES in map.ts. */
+  sites: SiteState[];
   nextId: number;
   arrivalTimer: number;
   caravanNext: number;
@@ -144,4 +172,7 @@ export type EngineEvent =
   | { type: 'janScared'; jan: Jan }
   | { type: 'furnaceHit'; kind: AnimalKind; wood: number; food: number; heat: number; jansLost: number }
   | { type: 'meaganInjured' }
-  | { type: 'guardKnockedOut'; janId: number };
+  | { type: 'guardKnockedOut'; janId: number }
+  | { type: 'plotReached'; site: number }
+  | { type: 'upgradeStarted'; site: number; building: BuildingKey }
+  | { type: 'buildingUpgraded'; site: number; building: BuildingKey; level: number };

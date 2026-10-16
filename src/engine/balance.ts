@@ -135,6 +135,32 @@ export const MEAGAN = {
   hp: 100,
   damagePerSecond: 10,
   range: 60,
+  /** Walking speed in map units per second (animals 40, guards 60). [planned] */
+  walkSpeed: 160,
+  /** Most resources she can carry at once, all types together. Upgrades come later. [planned] */
+  carryLimit: 20,
+} as const;
+
+/** Resources jump between Meagan's bag and a pile or site she walks near. [planned] */
+export const MAGNET = {
+  /** Reach around a site's drop point. */
+  radius: 80,
+  /** Units moved per second, deposits and pick-ups together. */
+  perSecond: 20,
+} as const;
+
+/** The furnace burns only Wood Meagan delivers into it. [planned] */
+export const FUEL = {
+  /** Wood the furnace holds per Furnace level (3× its heat cap at 10 heat per Wood). */
+  capPerFurnaceLevel: 30,
+} as const;
+
+/** Pathfinding grid. [planned] */
+export const PATH = {
+  /** Grid cell size in map units. */
+  cellSize: 20,
+  /** Meagan's body radius: obstacles are grown by this so she never clips a corner. */
+  clearance: 18,
 } as const;
 
 // ---------- Jobs ----------

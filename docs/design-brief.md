@@ -69,6 +69,14 @@ Storehouse multiplies every Wood, Food and Materials cap by 1.25 per level (comp
 
 **Start of a winter.** The city starts empty: 0 Jans, 0 of every resource and a cold furnace (heat 0). Furnace, Lumber Yard and Hunting Lodge are at Lv 1. Meagan rescues the first Jan herself and gathers the first resources by hand. Like the ads, she works automatically whenever she walks near the forest (5 Wood/s) or the hunting grounds (3 Food/s). Cold and hunger don't slow her.
 
+**Carrying and building (decided in Phase 3 planning).** Resources are physical, as in the ads:
+
+- Meagan carries a bag (20 units, all types together; the limit becomes upgradable later). Her hand-gathering goes into the bag.
+- Jans' output piles up at the producer: Wood at the Lumber Yard, Food in the food storage at the Hunting Lodge, Materials at the Workshop (at the furnace before there is a Workshop). Meagan picks Wood and Materials up by walking past. Jans eat from the food storage automatically, at a steady rate.
+- The furnace burns only Wood that Meagan delivers into it (it holds 30 Wood per Furnace level). Walking past the furnace tops it up first.
+- The map has empty plots. Tapping one walks her there and offers the building types; the chosen one becomes a construction site. Tapping a built building walks her there and starts its next upgrade. Walking near a site that is under construction or upgrading magnetically pulls what it needs out of her bag into its progress bar; when the bar is full it is built or levels up.
+- Tapping the ground walks her there, routing around buildings.
+
 ## Jobs
 
 Five jobs, each tied to one building that sets its rate. Output per Jan is the building's base rate times the Jan's variant bonus times Research multipliers.
@@ -270,8 +278,8 @@ A mobile-first web game built on Windows with Claude Code and published to GitHu
 
 1. **Scaffold.** Vite + TypeScript + Phaser project, portrait layout scaled to an iPhone screen, manifest and iOS meta tags, a snowy background with the furnace and a heat bar. Runs with `npm run dev`.
 2. **Engine.** Implement the Economy section in `src/engine/`: resources, Jans, jobs, buildings, costs, blizzards, tick loop, pause on hide, save/load, export/import code, and the unit tests. Wire the heat bar to the real engine.
-3. **Meagan.** A controllable character with a placeholder sprite: tap to walk with pathfinding around buildings; tapping a building walks her there and performs its action.
-4. **Carrying and rescues.** Meagan carries wood from the Lumber Yard to the furnace and food to the Jans, with an upgradable carry limit; frozen Jans arrive at the map edge and she must walk out to thaw them.
+3. **Meagan.** A controllable character with a placeholder sprite: tap to walk with pathfinding around buildings; tapping a building walks her there and performs its action. Also brought forward from Phase 4: plots, construction sites, her bag, piles and furnace fuel (see Carrying and building).
+4. **Carrying and rescues.** Upgradable carry limit; frozen Jans arrive at the map edge and she must walk out to thaw them.
 5. **Screens.** Build, Jans and Collection screens as overlays driven by the engine; placeholder shapes for art.
 6. **Content and juice.** Load the JSON content, milestones, rescue bubbles, idle chatter, blizzard banner, welcome-back card, number animations, sound effects.
 7. **Prestige and polish.** Thaw cutscene, Warmth Token shop, tier visuals, app icon, GitHub Pages deployment with a GitHub Actions workflow.
@@ -304,6 +312,7 @@ Decisions that change the build and are yours to make. None of them block Phase 
 - [ ] Working title: Frostbite is a placeholder. The real title probably comes from an in-joke.
 - [ ] Is the game a surprise? If yes, the avatars need to be made without her, which rules out photo-based apps on her phone.
 - [ ] Public or private GitHub repository? GitHub Pages on a free account only publishes public repositories; private means testing over Wi-Fi until you make it public.
-- [ ] Does tapping a building auto-route Meagan there and perform the action, or does she only act when walked over by hand? Auto-routing plays better one-handed and matches the ads.
+- [x] Does tapping a building auto-route Meagan there and perform the action? Yes: tapping auto-routes her there; deliveries happen by walking near (see Carrying and building).
+- [ ] Idea: a Canteen building that cooks better meals from the food storage; Jans who eat better meals get boosted production. Needs numbers before it's built.
 - [ ] Should any Jans be people other than you (a dog, a friend) or is it strictly all-Jans?
 - [ ] Target launch moment, if any. The milestone list and the secret date depend on it.

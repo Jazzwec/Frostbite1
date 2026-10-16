@@ -6,6 +6,7 @@ import {
   CAPS,
   CARAVAN,
   FOOD,
+  FUEL,
   GEAR,
   GUARDS,
   HEAT,
@@ -15,7 +16,7 @@ import {
   TIER_STARTS,
   VARIANTS,
 } from './balance';
-import type { BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, StoredResource } from './types';
+import type { BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, SiteState, StoredResource } from './types';
 
 export type Cost = Partial<Record<ResourceKey, number>>;
 
@@ -71,7 +72,29 @@ export function isUnlocked(s: GameState, key: BuildingKey): boolean {
   return s.buildings.furnace >= BUILDINGS[key].unlockFurnace;
 }
 
+/** What a site still needs delivered for its next level; empty when it has everything (or is an empty plot). */
+export function remainingCost(s: GameState, site: SiteState): Cost {
+  if (!site.building) return {};
+  const out: Cost = {};
+  const cost = buildingCost(site.building, s.buildings[site.building]);
+  for (const [k, v] of Object.entries(cost) as Array<[StoredResource, number]>) {
+    const left = v - (site.progress[k] ?? 0);
+    if (left > 1e-6) out[k] = left; // tolerance for fractional deliveries
+  }
+  return out;
+}
+
+export function bagTotal(s: GameState): number {
+  const b = s.meagan.bag;
+  return b.wood + b.food + b.materials;
+}
+
 // ---------- Heat ----------
+
+/** Most Wood the furnace holds. */
+export function fuelCap(s: GameState): number {
+  return FUEL.capPerFurnaceLevel * s.buildings.furnace;
+}
 
 export function heatCap(s: GameState): number {
   return HEAT.capPerFurnaceLevel * s.buildings.furnace;
