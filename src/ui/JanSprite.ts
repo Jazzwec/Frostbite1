@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Point } from '../engine/types';
 import { COLOURS, CSS, FONT } from '../theme';
+import { artImage, hasArt } from './art';
 
 /** Jans walking to work is cosmetic (output starts at assignment), so their pace lives here, not in balance.ts. */
 const WALK_SPEED = 120;
@@ -11,6 +12,8 @@ const WORK_BOB_SPEED = 0.006;
 /** Speech bubbles float above everything on the map, just under the HUD. */
 const BUBBLE_DEPTH = 9500;
 const BUBBLE_WIDTH = 300;
+/** Height of a Jan's generated art, in logical px. */
+const ART_HEIGHT = 112;
 
 /**
  * Placeholder Jan: beanie, beard, brown coat. Frozen Jans stand in an ice block, with a ring that empties
@@ -26,7 +29,8 @@ export class JanSprite extends Phaser.GameObjects.Container {
   private bubble: Phaser.GameObjects.Text | null = null;
   private bubbleUntil = 0;
 
-  constructor(scene: Phaser.Scene, at: Point, frozen: boolean) {
+  /** `artId` picks the generated art (e.g. 'jan-chef'); plain 'jan' art, then the drawn shape, are the fallbacks. */
+  constructor(scene: Phaser.Scene, at: Point, frozen: boolean, artId = 'jan') {
     super(scene, at.x, at.y);
     const ink = COLOURS.ink;
     const shadow = scene.add.ellipse(0, 0, 50, 14, ink, 0.18);
@@ -43,7 +47,10 @@ export class JanSprite extends Phaser.GameObjects.Container {
     g.fillStyle(ink, 1).fillCircle(7, -79, 2.4);
     g.fillStyle(COLOURS.frost, 1).fillRoundedRect(-18, -98, 36, 16, 7);
     g.fillStyle(COLOURS.ice, 1).fillCircle(0, -100, 6);
-    this.figure = scene.add.container(0, 0, [g]);
+    const id = hasArt(scene, artId) ? artId : 'jan';
+    const look = hasArt(scene, id) ? artImage(scene, id, 0, 0, { height: ART_HEIGHT }) : g;
+    if (look !== g) g.destroy();
+    this.figure = scene.add.container(0, 0, [look]);
     this.add([shadow, this.figure]);
 
     if (frozen) {

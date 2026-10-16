@@ -11,6 +11,7 @@ import { sfx } from '../game/sound';
 import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
 import { AnimalSprite } from '../ui/AnimalSprite';
+import { artImage, hasArt, preloadArt, trimArt } from '../ui/art';
 import { JOB_LABELS, formatCost, formatNumber } from '../ui/format';
 import { HeatBar } from '../ui/HeatBar';
 import { JanSprite } from '../ui/JanSprite';
@@ -41,6 +42,12 @@ const HEAT_STAGES = [
   { fire: 0.85, glow: 0.9, embers: 300 },
   { fire: 1, glow: 1, embers: 200 },
 ];
+/** Width of the generated furnace art, and its tint from cold to roaring (one per heat stage). */
+const FURNACE_ART_WIDTH = 360;
+const FURNACE_TINTS = [0x9fb3c6, 0xc9d3dd, 0xe3e8ee, 0xf4f4f4, 0xffffff];
+/** Height of a generated pine tree at scale 1, and width of the scrap heap art. */
+const PINE_ART_HEIGHT = 125;
+const SCRAP_ART_WIDTH = 150;
 /** Jans sharing a job stand in a little group around its work spot. */
 const CROWD = { perRow: 4, dx: 26, dy: 24 } as const;
 
@@ -54,6 +61,7 @@ export class CityScene extends Phaser.Scene {
   private picker!: BuildPicker;
   private debug!: Phaser.GameObjects.Graphics;
   private fireHolder!: Phaser.GameObjects.Container;
+  private furnaceArt: Phaser.GameObjects.Image | null = null;
   private glow!: Phaser.GameObjects.Ellipse;
   private embers!: Phaser.GameObjects.Particles.ParticleEmitter;
   private heatStage = -1;
@@ -77,7 +85,12 @@ export class CityScene extends Phaser.Scene {
     super('City');
   }
 
+  preload(): void {
+    preloadArt(this);
+  }
+
   create(): void {
+    trimArt(this);
     // create() runs again on restart, so start from empty sprite maps.
     this.frozen.clear();
     this.jans.clear();
@@ -87,6 +100,7 @@ export class CityScene extends Phaser.Scene {
     this.lastBag = bagTotal(engine.state);
     this.bagFlow = 0;
     this.builtFor = engine.loadCount;
+    this.furnaceArt = null;
     this.heatStage = -1;
     this.tierShown = 0;
     this.decor = [];
@@ -187,7 +201,8 @@ export class CityScene extends Phaser.Scene {
     if (stage !== this.heatStage) {
       this.heatStage = stage;
       const look = HEAT_STAGES[stage];
-      this.fireHolder.setScale(look.fire).setVisible(look.fire > 0);
+      this.fireHolder.setScale(look.fire).setVisible(look.fire > 0 && !this.furnaceArt);
+      this.furnaceArt?.setTint(FURNACE_TINTS[stage]);
       this.glow.setScale(look.glow).setVisible(look.glow > 0);
       if (look.embers > 0) {
         this.embers.frequency = look.embers;
@@ -275,7 +290,7 @@ export class CityScene extends Phaser.Scene {
     }
     for (const w of s.waiting) {
       let sprite = this.frozen.get(w.id);
-      if (!sprite) this.frozen.set(w.id, (sprite = new JanSprite(this, toScreen(w), true)));
+      if (!sprite) this.frozen.set(w.id, (sprite = new JanSprite(this, toScreen(w), true, w.variant ? `jan-${w.variant}` : 'jan')));
       sprite.setTimer(w.leavesAt === null ? null : (w.leavesAt - s.t) / caravanWait(s));
     }
 
@@ -295,7 +310,7 @@ export class CityScene extends Phaser.Scene {
       if (!sprite) {
         const from = this.thawedAt.get(jan.id) ?? spot;
         this.thawedAt.delete(jan.id);
-        this.jans.set(jan.id, (sprite = new JanSprite(this, toScreen(from), false)));
+        this.jans.set(jan.id, (sprite = new JanSprite(this, toScreen(from), false, `jan-${jan.variant}`)));
         const line = this.thawLine.get(jan.id);
         if (line) {
           sprite.say(line);
@@ -442,6 +457,10 @@ export class CityScene extends Phaser.Scene {
     for (const [dx, dy, k] of trees) {
       const x = forest.x + dx;
       const base = forest.y + dy;
+      if (hasArt(this, 'pine')) {
+        artImage(this, 'pine', x, base, { height: PINE_ART_HEIGHT * k }).setDepth(base);
+        continue;
+      }
       const g = this.add.graphics().setDepth(base);
       g.fillStyle(COLOURS.timber, 1).fillRect(x - 6 * k, base - 14 * k, 12 * k, 14 * k);
       g.fillStyle(COLOURS.pine, 1).fillTriangle(x - 34 * k, base - 12 * k, x, base - 110 * k, x + 34 * k, base - 12 * k);
@@ -469,7 +488,8 @@ export class CityScene extends Phaser.Scene {
     // A wrecked sled with spilled crates.
     const scrap = toScreen(SCRAP_HEAP);
     this.add.ellipse(scrap.x, scrap.y, 140, 40, COLOURS.snowDeep, 1).setDepth(DEPTH.background + 1);
-    const wreck = this.add.graphics().setDepth(scrap.y - 10);
+    if (hasArt(this, 'scrap')) artImage(this, 'scrap', scrap.x, scrap.y + 6, { width: SCRAP_ART_WIDTH }).setDepth(scrap.y - 10);
+    const wreck = this.add.graphics().setDepth(scrap.y - 10).setVisible(!hasArt(this, 'scrap'));
     wreck.lineStyle(6, COLOURS.slate, 1).lineBetween(scrap.x - 60, scrap.y - 10, scrap.x + 10, scrap.y - 22);
     wreck.lineStyle(6, COLOURS.slate, 1).lineBetween(scrap.x - 55, scrap.y - 2, scrap.x + 15, scrap.y - 14);
     wreck.fillStyle(COLOURS.timber, 1).fillRect(scrap.x - 50, scrap.y - 44, 52, 22);
@@ -492,14 +512,40 @@ export class CityScene extends Phaser.Scene {
   private drawFurnace(): void {
     const x = FURNACE_X;
     const base = FURNACE_Y;
-    const w = 300;
-    const h = 300;
-    const top = base - h;
-    const outline = COLOURS.ink;
 
     // Warm glow pooled on the snow around the furnace.
     this.glow = this.add.ellipse(x, base, 520, 130, COLOURS.emberGlow, 0.25).setDepth(DEPTH.background + 1);
     this.tweens.add({ targets: this.glow, alpha: 0.12, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+
+    // Generated art replaces the drawn furnace; heat then shows as its tint (syncHeat) instead of a fire.
+    let chimney: Point;
+    if (hasArt(this, 'furnace')) {
+      const art = artImage(this, 'furnace', x, base, { width: FURNACE_ART_WIDTH }).setDepth(base);
+      this.furnaceArt = art;
+      this.fireHolder = this.add.container(x, base - 80);
+      chimney = { x: x + art.displayWidth * 0.22, y: base - art.displayHeight + 10 };
+    } else chimney = this.drawFurnaceShape(x, base);
+
+    // Embers drifting out of the chimney, faster the hotter the fire.
+    this.embers = this.add
+      .particles(chimney.x, chimney.y, 'ember', {
+        speedY: { min: -120, max: -60 },
+        speedX: { min: -30, max: 30 },
+        scale: { start: 1, end: 0.2 },
+        alpha: { start: 1, end: 0 },
+        tint: [COLOURS.ember, COLOURS.emberGlow],
+        lifespan: 1800,
+        frequency: 220,
+      })
+      .setDepth(base);
+  }
+
+  /** The placeholder furnace: stone body, chimney, arched door and a flickering fire. Returns the chimney top. */
+  private drawFurnaceShape(x: number, base: number): Point {
+    const w = 300;
+    const h = 300;
+    const top = base - h;
+    const outline = COLOURS.ink;
 
     const g = this.add.graphics().setDepth(base);
     // Chimney.
@@ -553,18 +599,7 @@ export class CityScene extends Phaser.Scene {
     frame.lineStyle(6, outline, 0.8);
     for (const gx of [-40, 0, 40]) frame.lineBetween(x + gx, dTop + 30, x + gx, base - 30);
 
-    // Embers drifting out of the chimney, faster the hotter the fire.
-    this.embers = this.add
-      .particles(x + 85, top - 170, 'ember', {
-        speedY: { min: -120, max: -60 },
-        speedX: { min: -30, max: 30 },
-        scale: { start: 1, end: 0.2 },
-        alpha: { start: 1, end: 0 },
-        tint: [COLOURS.ember, COLOURS.emberGlow],
-        lifespan: 1800,
-        frequency: 220,
-      })
-      .setDepth(base);
+    return { x: x + 85, y: top - 170 };
   }
 
   private addSnowfall(): void {

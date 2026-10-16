@@ -1,12 +1,15 @@
 import Phaser from 'phaser';
 import type { Point, StoredResource } from '../engine/types';
 import { COLOURS, CSS, FONT } from '../theme';
+import { artImage, hasArt } from './art';
 import { RESOURCE_LABELS, formatNumber } from './format';
 
 /** How quickly the sprite catches up with the engine position (which moves in 10 Hz steps). Higher = snappier. */
 const FOLLOW_RATE = 18;
 const BOB_HEIGHT = 6;
 const BOB_SPEED = 0.018;
+/** Height of her generated art, in logical px (the drawn placeholder is about the same). */
+const ART_HEIGHT = 120;
 
 /** Placeholder Meagan: parka, ember scarf and a bag counter above her head. Feet at the container origin. */
 export class MeaganSprite extends Phaser.GameObjects.Container {
@@ -41,7 +44,10 @@ export class MeaganSprite extends Phaser.GameObjects.Container {
     g.fillStyle(COLOURS.ember, 1).fillRoundedRect(-20, -70, 40, 11, 5);
     g.fillRect(-16, -62, 9, 20);
 
-    this.figure = scene.add.container(0, 0, [g]);
+    // Generated art replaces the drawn placeholder when it exists.
+    const look = hasArt(scene, 'meagan') ? artImage(scene, 'meagan', 0, 0, { height: ART_HEIGHT }) : g;
+    if (look !== g) g.destroy();
+    this.figure = scene.add.container(0, 0, [look]);
     this.bagLabel = scene.add
       .text(0, -128, '', {
         fontFamily: FONT,

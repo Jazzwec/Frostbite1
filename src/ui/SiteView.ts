@@ -6,6 +6,7 @@ import { SITES, pileSiteIndex } from '../engine/map';
 import type { BuildingKey, GameState, Point, StoredResource } from '../engine/types';
 import { ORIGIN, toScreen } from '../scenes/coords';
 import { COLOURS, CSS, FONT, ROOFS } from '../theme';
+import { artImage, hasArt } from './art';
 import { RESOURCE_LABELS, formatNumber } from './format';
 
 /** Height of a placeholder building's walls above its base line. */
@@ -14,6 +15,8 @@ const ROOF_H = 50;
 const BAR_W = 160;
 const BAR_H = 20;
 const PILED: StoredResource[] = ['wood', 'food', 'materials'];
+/** Width of a building's generated art, in logical px. */
+const ART_WIDTH = 175;
 
 /**
  * One building site: an empty plot, a construction site or a placeholder building, with its pile count
@@ -27,6 +30,8 @@ export class SiteView extends Phaser.GameObjects.Container {
   private readonly bar: Phaser.GameObjects.Graphics;
   private readonly barText: Phaser.GameObjects.Text;
   private readonly barPos: Point;
+  private art: Phaser.GameObjects.Image | null = null;
+  private artKey = '';
   private sig = '';
 
   constructor(
@@ -89,6 +94,8 @@ export class SiteView extends Phaser.GameObjects.Container {
     this.sig = sig;
 
     this.g.clear();
+    this.art?.setVisible(false);
+    this.plainLabel();
     if (this.isFurnace) this.label.setText([`Furnace Lv ${level}`, fuel, ...piles].join('\n'));
     else if (!key) this.drawPlot();
     else if (level === 0) this.drawConstruction(key);
@@ -116,7 +123,37 @@ export class SiteView extends Phaser.GameObjects.Container {
     this.label.setText(buildingName(key)).setColor(CSS.ink).setY(-BODY_H / 2 - 10);
   }
 
+  /** The drawn buildings' label style: light text centred on the walls. */
+  private plainLabel(): void {
+    if (this.isFurnace) return;
+    this.label.setOrigin(0.5).setColor(CSS.ice).setBackgroundColor('rgba(0,0,0,0)').setPadding(0);
+  }
+
+  /** Generated art for a built building, with the label on a small tag at its foot. */
+  private drawArt(key: BuildingKey, level: number, piles: string[]): void {
+    if (this.artKey !== key) {
+      this.art?.destroy();
+      this.art = artImage(this.scene, key, 0, 0, { width: ART_WIDTH });
+      this.addAt(this.art, 0);
+      this.artKey = key;
+      this.barPos.y = -this.art.displayHeight - 30;
+      this.barText.setPosition(this.barPos.x, this.barPos.y - 8);
+    }
+    this.art!.setVisible(true);
+    this.label
+      .setText([`${buildingName(key)} · Lv ${level}`, ...piles].join('\n'))
+      .setOrigin(0.5, 1)
+      .setY(-6)
+      .setColor(CSS.ink)
+      .setBackgroundColor(CSS.ice)
+      .setPadding(6, 2, 6, 2);
+  }
+
   private drawBuilding(key: BuildingKey, level: number, piles: string[], tier: number): void {
+    if (hasArt(this.scene, key)) {
+      this.drawArt(key, level, piles);
+      return;
+    }
     const w = this.siteW;
     const g = this.g;
     const roof = ROOFS[Object.keys(BUILDINGS).indexOf(key) % ROOFS.length];

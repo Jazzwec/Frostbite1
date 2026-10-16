@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { AnimalKind, Point } from '../engine/types';
 import { COLOURS } from '../theme';
+import { artImage, hasArt } from './art';
 
 /** Same catch-up easing as Meagan: the engine moves animals in 10 Hz steps. */
 const FOLLOW_RATE = 14;
@@ -10,6 +11,9 @@ interface Look {
   body: number;
   scale: number;
 }
+
+/** Width of each animal's generated art, in logical px. */
+const ART_WIDTH: Record<AnimalKind, number> = { wolf: 100, bear: 135, oldBear: 175 };
 
 const LOOKS: Record<AnimalKind, Look> = {
   wolf: { body: 0x8a96a3, scale: 0.8 },
@@ -45,8 +49,11 @@ export class AnimalSprite extends Phaser.GameObjects.Container {
     }
     g.fillStyle(ink, 1).fillCircle(39, -41, 2.5).fillCircle(48, -35, 3);
     g.setScale(scale);
-    this.figure = scene.add.container(0, 0, [g]);
-    this.barY = -70 * scale;
+    // Generated art (drawn facing right) replaces the placeholder when it exists.
+    const art = hasArt(scene, kind) ? artImage(scene, kind, 0, 0, { width: ART_WIDTH[kind] }) : null;
+    if (art) g.destroy();
+    this.figure = scene.add.container(0, 0, [art ?? g]);
+    this.barY = art ? -art.displayHeight - 12 : -70 * scale;
     this.hp = scene.add.graphics();
     this.add([scene.add.ellipse(0, 0, 70 * scale, 14, ink, 0.18), this.figure, this.hp]);
     this.setDepth(this.y);

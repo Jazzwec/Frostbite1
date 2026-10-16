@@ -44,6 +44,7 @@ names and text are original.
 - `npm run dev` — dev server; `npm run dev -- --host` to open it on an iPhone over Wi-Fi.
 - `npm run typecheck` — `tsc --noEmit`. `npm run build` — typecheck + production build to `dist/`.
 - `npm run icons` — regenerates the placeholder PNG icons in `public/icons/` (Node built-ins only).
+- `npm run art -- --list | <ids> | --missing [--redo] [--over]` — generates art with the OpenAI Images API (needs `OPENAI_API_KEY` in the environment) into `src/assets/art/<id>.png`. Prompts, shared style, models and the image budget live in `art/prompts.json`; `art/log.json` counts images made. `src/ui/art.ts` loads whatever exists and crops it; every sprite falls back to its drawn placeholder when its image is missing.
 - `npm test` — Vitest, all tests once. Single file or test: `npx vitest run src/engine/heat.test.ts -t "blizzard"`. Tests sit next to the code as `src/engine/*.test.ts`.
 
 ## How to work
