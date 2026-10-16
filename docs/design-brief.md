@@ -93,7 +93,7 @@ Five jobs, each tied to one building that sets its rate. Output per Jan is the b
 
 Rate upgrades compound: a job's rate per Jan is base × growth^(level − 1).
 
-Idle Jans still eat and still add to heat drain, so the game nudges players to assign everyone. A one-tap "auto-assign" that fills jobs by current need unlocks early in Tier 2 so the late game does not become micromanagement.
+Idle Jans still eat and still add to heat drain, so the game nudges players to assign everyone. A one-tap "auto-assign" that fills jobs by current need unlocks at Furnace Lv 4 so the late game does not become micromanagement. It uses the same rule as a newly thawed Jan (Lumber Yard first, then Hunting while eating outruns hunting, then job shares Chopping 3 : Hunting 2 : Building 2 : Research 1), rebalances every 5 seconds moving as few Jans as possible, never touches guards or scavengers, and switches off when the player moves a Jan by hand.
 
 ## Buildings & upgrades
 
@@ -252,8 +252,8 @@ Four screens plus overlays. The City screen is where 90% of play happens and it 
 | Screen | Purpose | What it shows |
 | --- | --- | --- |
 | City | Main play | Top bar: Heat gauge, Jan count vs cap, Wood, Food, Materials. Centre: the city as a scrolling 2D scene with Meagan at the furnace, Jans on their job tiles, arrivals at the edge. Bottom: a "next upgrade" card showing the cheapest useful purchase, and the blizzard forecast strip |
-| Build | Spend resources | List of buildings with level, next cost, effect of next level, and a buy button; greyed if unaffordable with time-to-afford shown |
-| Jans | Manage population | Job slots as rows with Jan portraits; drag or tap to reassign; auto-assign toggle; idle pool at the top |
+| Build | Overview of the city | Every building with level, what each level does, next cost and delivery progress. Go sends Meagan there (an unbuilt one gets a construction site on the nearest free plot); building itself happens on the map by carrying |
+| Jans | Manage population | One row per job with its output, the kinds of Jan on it and −/+ buttons (+ takes an idle Jan first, else one from the job most over its share); food hunted vs eaten; Auto-assign switch |
 | Collection | Reward | Grid of all Jan variants, discovered ones in colour with bio and count rescued, undiscovered as silhouettes |
 
 Overlays: rescue moment (Meagan walks out, speech bubble, Jan joins), milestone card, blizzard warning banner, welcome-back card on launch showing the city's state and the next blizzard timer, thaw cutscene, Warmth Token shop.

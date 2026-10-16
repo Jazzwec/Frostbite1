@@ -14,7 +14,7 @@ export function buildingEffect(key: BuildingKey): string {
   return BUILDINGS[key].effect;
 }
 
-const JANS = jans as Record<VariantKey, { name: string; bonus: string }>;
+const JANS = jans as Record<VariantKey, { name: string; bonus: string; bio: string }>;
 
 export function variantName(v: VariantKey): string {
   return JANS[v].name;
@@ -22,4 +22,8 @@ export function variantName(v: VariantKey): string {
 
 export function variantBonus(v: VariantKey): string {
   return JANS[v].bonus;
+}
+
+export function variantBio(v: VariantKey): string {
+  return JANS[v].bio;
 }

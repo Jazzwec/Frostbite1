@@ -1,8 +1,32 @@
 {
-  "plain": { "name": "Plain Jan", "bonus": "No bonus. Still a very good Jan." },
-  "chef": { "name": "Chef Jan", "bonus": "+25% Hunting" },
-  "sleepy": { "name": "Sleepy Jan", "bonus": "Works 20% slower, eats 50% less" },
-  "spreadsheet": { "name": "Spreadsheet Jan", "bonus": "+25% Research" },
-  "keys": { "name": "Lost-His-Keys Jan", "bonus": "Finds something useful when rescued" },
-  "lumberjack": { "name": "Lumberjack Jan", "bonus": "+25% Chopping" }
+  "plain": {
+    "name": "Plain Jan",
+    "bonus": "No bonus. Still a very good Jan.",
+    "bio": "The common Jan. Found in parkas, near fires. Says thank you a lot."
+  },
+  "chef": {
+    "name": "Chef Jan",
+    "bonus": "+25% Hunting",
+    "bio": "Rarely seen without a ladle. Believes most problems can be solved with soup."
+  },
+  "sleepy": {
+    "name": "Sleepy Jan",
+    "bonus": "Works 20% slower, eats 50% less",
+    "bio": "Will absolutely help, after a nap. Eats very little, which is its own kind of help."
+  },
+  "spreadsheet": {
+    "name": "Spreadsheet Jan",
+    "bonus": "+25% Research",
+    "bio": "Tracks everything, including the trackers. Happiest in a hut with a pencil."
+  },
+  "keys": {
+    "name": "Lost-His-Keys Jan",
+    "bonus": "Finds something useful when rescued",
+    "bio": "Has lost his keys every winter on record. Finds other things instead."
+  },
+  "lumberjack": {
+    "name": "Lumberjack Jan",
+    "bonus": "+25% Chopping",
+    "bio": "Speaks fluent tree. Noticeably more productive in a checked shirt."
+  }
 }

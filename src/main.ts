@@ -4,8 +4,9 @@ import './ui/overlay/overlay.css';
 import { CityScene } from './scenes/CityScene';
 import { CSS, GAME_HEIGHT, GAME_WIDTH } from './theme';
 import { buildScreen } from './ui/overlay/BuildScreen';
+import { collectionScreen } from './ui/overlay/CollectionScreen';
 import { jansScreen } from './ui/overlay/JansScreen';
-import { comingSoon, settingsScreen } from './ui/overlay/SettingsScreen';
+import { settingsScreen } from './ui/overlay/SettingsScreen';
 import { Shell } from './ui/overlay/Shell';
 
 const game = new Phaser.Game({
@@ -25,6 +26,6 @@ const game = new Phaser.Game({
 new Shell(game, {
   build: buildScreen,
   jans: jansScreen,
-  collection: comingSoon('Collection'),
+  collection: collectionScreen,
   settings: settingsScreen,
 });

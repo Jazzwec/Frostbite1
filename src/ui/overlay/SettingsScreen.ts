@@ -70,10 +70,3 @@ export function settingsScreen(close: () => void): Screen {
   return { el, refresh: () => {} };
 }
 
-/** Placeholder for tabs whose screens come in later steps. */
-export function comingSoon(title: string): () => Screen {
-  return () => ({
-    el: h('section', {}, h('h1', {}, title), h('p', {}, 'Coming in the next step.')),
-    refresh: () => {},
-  });
-}

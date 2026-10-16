@@ -245,3 +245,46 @@
   height: 100%;
   background: var(--ember);
 }
+
+/* ---------- Collection screen ---------- */
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--u) * 20);
+}
+.jan-card {
+  padding: calc(var(--u) * 20);
+  border: var(--line-w) solid var(--line);
+  border-radius: calc(var(--u) * 24);
+  background: var(--snow);
+  text-align: center;
+}
+.jan-card b {
+  display: block;
+  font-size: calc(var(--u) * 30);
+}
+.jan-card .bonus {
+  margin: calc(var(--u) * 6) 0 calc(var(--u) * 10);
+  font-size: calc(var(--u) * 22);
+  color: var(--ember);
+}
+.jan-card p {
+  font-size: calc(var(--u) * 22);
+  text-align: left;
+}
+.jan-card.unfound {
+  background: var(--snow-deep);
+}
+.portrait {
+  width: calc(var(--u) * 160);
+  height: calc(var(--u) * 173);
+  margin: 0 auto calc(var(--u) * 10);
+}
+.portrait svg {
+  width: 100%;
+  height: 100%;
+}
+.unfound .portrait {
+  opacity: 0.45;
+}
