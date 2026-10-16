@@ -15,6 +15,11 @@ export function formatNumber(n: number): string {
   return i === 0 ? String(v) : `${(Math.floor(v * 10) / 10).toFixed(1).replace(/\.0$/, '')}${SUFFIXES[i]}`;
 }
 
+/** Per-second rates: 0.45 → "0.5", 2.4 → "2.4", 12.3 → "12", 4567 → "4.5K". */
+export function formatRate(n: number): string {
+  return n < 10 ? (Math.round(n * 10) / 10).toString() : formatNumber(n);
+}
+
 /** 150 → "2:30". */
 export function formatClock(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds));

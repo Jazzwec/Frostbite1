@@ -1,0 +1,8 @@
+{
+  "plain": { "name": "Plain Jan", "bonus": "No bonus. Still a very good Jan." },
+  "chef": { "name": "Chef Jan", "bonus": "+25% Hunting" },
+  "sleepy": { "name": "Sleepy Jan", "bonus": "Works 20% slower, eats 50% less" },
+  "spreadsheet": { "name": "Spreadsheet Jan", "bonus": "+25% Research" },
+  "keys": { "name": "Lost-His-Keys Jan", "bonus": "Finds something useful when rescued" },
+  "lumberjack": { "name": "Lumberjack Jan", "bonus": "+25% Chopping" }
+}

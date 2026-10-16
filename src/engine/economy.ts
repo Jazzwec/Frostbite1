@@ -203,20 +203,83 @@ export function foodEaten(s: GameState): number {
   return n * FOOD.perJanPerSecond * kitchen;
 }
 
-type AutoJob = keyof typeof AUTO_JOB.weights;
+// ---------- Job choice (thawing, the Jans screen, Auto-assign) ----------
+
+/** Jobs that thawing and Auto-assign hand out. Guarding and scavenging stay manual. */
+export type AutoJob = keyof typeof AUTO_JOB.weights;
+export const AUTO_JOBS = Object.keys(AUTO_JOB.weights) as AutoJob[];
+
+export function isAutoJob(job: Assignment): job is AutoJob {
+  return job in AUTO_JOB.weights;
+}
+
+/** Unlocked auto jobs, in priority order. */
+export function openAutoJobs(s: GameState): AutoJob[] {
+  return AUTO_JOBS.filter((j) => jobUnlocked(s, j));
+}
+
+function countJobs(s: GameState): Record<Assignment, number> {
+  const counts = { chop: 0, hunt: 0, build: 0, research: 0, scavenge: 0, guard: 0, idle: 0 };
+  for (const j of s.jans) counts[j.job]++;
+  return counts;
+}
+
+/** The rule: the Lumber Yard first, then Hunting while eating outruns hunting, then the job furthest below its share. */
+function nextAutoJob(open: AutoJob[], counts: Record<AutoJob, number>, hunted: number, eaten: number): AutoJob {
+  const w = AUTO_JOB.weights;
+  if (open.includes('chop') && counts.chop === 0) return 'chop';
+  if (open.includes('hunt') && hunted < eaten) return 'hunt';
+  return open.reduce((best, j) => (counts[j] / w[j] < counts[best] / w[best] ? j : best));
+}
+
+/** The job a newly thawed Jan walks to (his own eating included). */
+export function neediestJob(s: GameState): Assignment {
+  const open = openAutoJobs(s);
+  if (open.length === 0) return 'idle';
+  return nextAutoJob(open, countJobs(s), jobRate(s, 'hunt'), foodEaten(s) + FOOD.perJanPerSecond);
+}
+
+/** Auto-assign's target: the idle and auto-job Jans handed out one by one with the same rule. */
+export function jobTargets(s: GameState): Record<AutoJob, number> {
+  const targets: Record<AutoJob, number> = { chop: 0, hunt: 0, build: 0, research: 0 };
+  const open = openAutoJobs(s);
+  if (open.length === 0) return targets;
+  const pool = s.jans.filter((j) => j.job === 'idle' || isAutoJob(j.job)).length;
+  const perHunter = perJanRate(s, 'hunt') * conditionMult(s);
+  const eaten = foodEaten(s);
+  let hunted = 0;
+  for (let i = 0; i < pool; i++) {
+    const job = nextAutoJob(open, targets, hunted, eaten);
+    targets[job]++;
+    if (job === 'hunt') hunted += perHunter;
+  }
+  return targets;
+}
+
+function newestOn(s: GameState, job: Assignment): number | null {
+  let id: number | null = null;
+  for (const j of s.jans) if (j.job === job && (id === null || j.id > id)) id = j.id;
+  return id;
+}
 
 /**
- * The job a newly thawed Jan walks to: the Lumber Yard first, then Hunting if eating (his included) outruns hunting,
- * then whichever unlocked job is furthest below its share in AUTO_JOB.weights.
+ * The Jan the Jans screen's + moves onto `job`: the newest idle Jan, else the newest from the auto job furthest
+ * over its share, else from guarding or scavenging. Null if nobody can move.
  */
-export function neediestJob(s: GameState): Assignment {
-  const weights = AUTO_JOB.weights;
-  const open = (Object.keys(weights) as AutoJob[]).filter((j) => jobUnlocked(s, j));
-  if (open.length === 0) return 'idle';
-  const count = (job: JobKey): number => s.jans.filter((j) => j.job === job).length;
-  if (open.includes('chop') && count('chop') === 0) return 'chop';
-  if (open.includes('hunt') && jobRate(s, 'hunt') < foodEaten(s) + FOOD.perJanPerSecond) return 'hunt';
-  return open.reduce((best, j) => (count(j) / weights[j] < count(best) / weights[best] ? j : best));
+export function pickJanFor(s: GameState, job: Assignment): number | null {
+  const idle = newestOn(s, 'idle');
+  if (idle !== null || job === 'idle') return idle;
+  const counts = countJobs(s);
+  const w = AUTO_JOB.weights;
+  const donors = AUTO_JOBS.filter((j) => j !== job && counts[j] > 0);
+  if (donors.length > 0) return newestOn(s, donors.reduce((a, b) => (counts[b] / w[b] > counts[a] / w[a] ? b : a)));
+  const manual = (['scavenge', 'guard'] as const).filter((j) => j !== job && counts[j] > 0);
+  return manual.length > 0 ? newestOn(s, manual[0]) : null;
+}
+
+/** The Jan the Jans screen's − sends to idle: the newest on that job. */
+export function janToRelease(s: GameState, job: JobKey): number | null {
+  return newestOn(s, job);
 }
 
 export function scavengeInterval(s: GameState): number {

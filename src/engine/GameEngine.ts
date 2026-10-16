@@ -1,5 +1,5 @@
 // The game's rules engine: owns state, runs the fixed tick, exposes player actions. No Phaser or DOM in here.
-import { BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, START, TICK_SECONDS, VARIANTS } from './balance';
+import { AUTO_JOB, BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, START, TICK_SECONDS, VARIANTS } from './balance';
 import { updateAttacks } from './combat';
 import {
   arrivalInterval,
@@ -13,17 +13,20 @@ import {
   heatDrain,
   heatPerWood,
   isUnlocked,
+  janToRelease,
   jobRate,
   jobUnlocked,
   kitCost,
+  pickJanFor,
   type Cost,
 } from './economy';
 import { rescueArrival, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
 import { MAP_BOUNDS, MEAGAN_START, SITES, siteIndexOf } from './map';
+import { rebalanceJobs, updateAutoAssign } from './jobs';
 import { updateMeagan } from './meagan';
 import { buildGrid, findPath, type NavGrid } from './pathfinding';
 import { seededRng, type Rng } from './rng';
-import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, Point, ResourceKey, VariantKey } from './types';
+import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, JobKey, Point, ResourceKey, VariantKey } from './types';
 
 export function newWinterState(): GameState {
   const buildings = Object.fromEntries(
@@ -60,6 +63,8 @@ export function newWinterState(): GameState {
     burnRate: 0,
     found: Object.fromEntries((Object.keys(VARIANTS) as VariantKey[]).map((v) => [v, 0])) as Record<VariantKey, number>,
     stats: { rescued: 0 },
+    autoAssign: false,
+    autoAssignTimer: 0,
   };
 }
 
@@ -171,6 +176,7 @@ export class GameEngine {
 
     updateArrivals(s, dt, this.ctx, arrivalInterval(s));
     updateHeatZero(s, dt, this.ctx);
+    updateAutoAssign(s, dt);
   }
 
   /** Events since the last call, oldest first. */
@@ -269,6 +275,35 @@ export class GameEngine {
     const jan = this.state.jans.find((j) => j.id === janId);
     if (!jan || (job !== 'idle' && !jobUnlocked(this.state, job))) return false;
     jan.job = job;
+    return true;
+  }
+
+  /** Jans screen +: move a Jan onto this job (an idle one first). Choosing by hand turns Auto-assign off. */
+  addToJob(job: JobKey): boolean {
+    const id = pickJanFor(this.state, job);
+    if (id === null || !this.assign(id, job)) return false;
+    this.state.autoAssign = false;
+    return true;
+  }
+
+  /** Jans screen −: send this job's newest Jan to idle. Turns Auto-assign off. */
+  removeFromJob(job: JobKey): boolean {
+    const id = janToRelease(this.state, job);
+    if (id === null || !this.assign(id, 'idle')) return false;
+    this.state.autoAssign = false;
+    return true;
+  }
+
+  canAutoAssign(): boolean {
+    return this.state.buildings.furnace >= AUTO_JOB.unlockFurnace;
+  }
+
+  /** Switch Auto-assign; turning it on rebalances straight away. Refused before it unlocks. */
+  setAutoAssign(on: boolean): boolean {
+    if (on && !this.canAutoAssign()) return false;
+    this.state.autoAssign = on;
+    this.state.autoAssignTimer = 0;
+    if (on) rebalanceJobs(this.state);
     return true;
   }
 

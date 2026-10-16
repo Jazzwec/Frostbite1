@@ -109,6 +109,10 @@ export const CARAVAN = {
 export const AUTO_JOB = {
   /** Target share of Jans per job; ties go to the earlier job. Guarding and scavenging stay manual. */
   weights: { chop: 3, hunt: 2, build: 2, research: 1 } satisfies Partial<Record<JobKey, number>>,
+  /** The Auto-assign switch unlocks at this Furnace level ("early in Tier 2"). [brief] */
+  unlockFurnace: 4,
+  /** While Auto-assign is on, Jans are rebalanced this often. [planned] */
+  rebalanceSeconds: 5,
 };
 
 /** Lost-His-Keys Jan finds this many seconds of the city's gross output for a random resource. [planned] */

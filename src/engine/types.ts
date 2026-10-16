@@ -154,6 +154,9 @@ export interface GameState {
   /** Jans met per variant this winter (returning Jans don't count again), for the Collection screen. */
   found: Record<VariantKey, number>;
   stats: { rescued: number };
+  /** Auto-assign switch on the Jans screen, and time since its last rebalance. */
+  autoAssign: boolean;
+  autoAssignTimer: number;
 }
 
 export type EngineEvent =

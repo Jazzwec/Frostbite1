@@ -157,3 +157,69 @@
 .note.good {
   color: var(--frost);
 }
+
+/* ---------- Jans screen ---------- */
+
+.screen p.warn {
+  color: var(--ember);
+}
+.auto-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 20);
+  margin: calc(var(--u) * 12) 0 calc(var(--u) * 20);
+}
+.hint {
+  font-size: calc(var(--u) * 24);
+  color: var(--slate);
+}
+.job-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 16);
+  padding: calc(var(--u) * 20) 0;
+  border-top: var(--line-w) solid var(--line);
+}
+.job-row.locked {
+  opacity: 0.6;
+}
+.job-info {
+  flex: 1;
+  min-width: 0;
+}
+.job-info b {
+  font-size: calc(var(--u) * 34);
+}
+.detail {
+  font-size: calc(var(--u) * 24);
+  color: var(--slate);
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 8);
+  margin-top: calc(var(--u) * 8);
+}
+.pill {
+  padding: calc(var(--u) * 4) calc(var(--u) * 14);
+  border-radius: calc(var(--u) * 30);
+  background: var(--snow-deep);
+  font-size: calc(var(--u) * 22);
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 12);
+}
+.btn.step {
+  width: calc(var(--u) * 88);
+  padding: 0;
+  font-size: calc(var(--u) * 44);
+  line-height: 1;
+}
+.count {
+  min-width: calc(var(--u) * 56);
+  text-align: center;
+  font-size: calc(var(--u) * 40);
+  font-variant-numeric: tabular-nums;
+}
