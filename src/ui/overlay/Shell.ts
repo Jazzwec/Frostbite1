@@ -13,7 +13,8 @@ export interface Screen {
   refresh(): void;
 }
 
-export type TabKey = 'city' | 'build' | 'jans' | 'collection' | 'settings';
+/** Tabs on the bar, plus 'thaw', opened from the strip when the thaw arrives. */
+export type TabKey = 'city' | 'build' | 'jans' | 'collection' | 'settings' | 'thaw';
 /** Builds a screen when its tab opens; `close` returns to the city. */
 export type ScreenFactory = (close: () => void) => Screen;
 
@@ -36,6 +37,7 @@ export class Shell {
   private readonly strip = h('div', { class: 'strip' });
   private readonly counts = h('span');
   private readonly weather = h('span');
+  private readonly thawButton = h('button', { class: 'thaw-btn', onclick: () => this.select('thaw') }, '☀ The thaw is here');
   private shown: Record<Counted, number>;
   private countsText = '';
   private lastFrame = 0;
@@ -49,7 +51,7 @@ export class Shell {
   ) {
     this.layer = document.getElementById('ui')!;
     this.setPalette();
-    this.strip.append(this.counts, this.weather);
+    this.strip.append(this.counts, this.weather, this.thawButton);
     this.shown = this.actualCounts();
     requestAnimationFrame((t) => this.animate(t));
 
@@ -124,6 +126,7 @@ export class Shell {
     if (bz.active) this.setWeather(`❄ ${name}! ${formatClock(bz.end - s.t)} left`, 'blizzard now');
     else if (bz.warned) this.setWeather(`❄ ${name} in ${formatClock(bz.next - s.t)}`, 'blizzard');
     else this.setWeather('', '');
+    this.thawButton.hidden = !(engine.thawReady || s.thawed);
     this.screen?.refresh();
   }
 

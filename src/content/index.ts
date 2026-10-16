@@ -1,6 +1,6 @@
 // Typed access to the player-facing writing in src/content/*.json.
 import type { MilestoneDef } from '../engine/milestones';
-import type { BuildingKey, VariantKey } from '../engine/types';
+import type { BuildingKey, ShopKey, VariantKey } from '../engine/types';
 import buildings from './buildings.json';
 import chatterLines from './chatter.json';
 import jans from './jans.json';
@@ -8,6 +8,7 @@ import messages from './messages.json';
 import milestones from './milestones.json';
 import research from './research.json';
 import rescueLines from './rescue_lines.json';
+import shop from './shop.json';
 import tips from './tips.json';
 
 const BUILDINGS = buildings as Record<BuildingKey, { name: string; effect: string }>;
@@ -100,3 +101,13 @@ export const MESSAGES = messages as {
   welcomeBack: string;
 };
 export const blizzardWarningLine = (): string => pick(MESSAGES.blizzardWarnings);
+
+const SHOP_TEXT = shop as Record<ShopKey, { name: string; description: string }>;
+
+export function shopName(key: ShopKey): string {
+  return SHOP_TEXT[key].name;
+}
+
+export function shopDescription(key: ShopKey): string {
+  return SHOP_TEXT[key].description;
+}

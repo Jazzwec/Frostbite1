@@ -10,6 +10,7 @@ import { collectionScreen } from './ui/overlay/CollectionScreen';
 import { jansScreen } from './ui/overlay/JansScreen';
 import { Banner } from './ui/overlay/Banner';
 import { MilestoneCards } from './ui/overlay/MilestoneCards';
+import { thawScreen } from './ui/overlay/ThawScreen';
 import { showWelcome } from './ui/overlay/Welcome';
 import { settingsScreen } from './ui/overlay/SettingsScreen';
 import { Shell } from './ui/overlay/Shell';
@@ -33,6 +34,7 @@ new Shell(game, {
   jans: jansScreen,
   collection: collectionScreen,
   settings: settingsScreen,
+  thaw: thawScreen,
 });
 
 const layer = document.getElementById('ui')!;

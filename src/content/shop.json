@@ -1,0 +1,8 @@
+{
+  "warmStart": { "name": "Warm start", "description": "Begin each winter with Furnace Lv 2 and 50 Wood in the furnace." },
+  "thickWalls": { "name": "Thick walls", "description": "Heat drain −5% per rank." },
+  "fastFeet": { "name": "Fast feet", "description": "Jans arrive 10% more often per rank." },
+  "deepPockets": { "name": "Deep pockets", "description": "Wood, Food and Materials storage +25% per rank." },
+  "oldFriends": { "name": "Old friends", "description": "One more Veteran at each thaw per rank." },
+  "headStart": { "name": "Head start", "description": "Every job +10% per rank." }
+}

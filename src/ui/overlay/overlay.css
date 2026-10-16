@@ -401,3 +401,27 @@
   font-size: calc(var(--u) * 24);
   color: var(--slate);
 }
+
+/* ---------- The thaw ---------- */
+
+.thaw-btn {
+  display: block;
+  margin: calc(var(--u) * 10) auto 0;
+  min-height: calc(var(--u) * 72);
+  padding: 0 calc(var(--u) * 28);
+  border: var(--line-w) solid var(--ink);
+  border-radius: calc(var(--u) * 36);
+  background: var(--ember-glow);
+  pointer-events: auto;
+  animation: pop-in 0.5s ease-out;
+}
+.thaw-btn[hidden] {
+  display: none;
+}
+.thaw .story {
+  font-size: calc(var(--u) * 34);
+  color: var(--ink);
+}
+.thaw-actions {
+  margin-top: calc(var(--u) * 30);
+}
