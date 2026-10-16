@@ -69,11 +69,12 @@ export class MeaganSprite extends Phaser.GameObjects.Container {
     this.setDepth(this.y);
   }
 
-  setBag(bag: Record<StoredResource, number>): void {
-    const parts = (Object.entries(bag) as Array<[StoredResource, number]>)
-      .filter(([, v]) => v >= 1)
-      .map(([k, v]) => `${formatNumber(v)} ${RESOURCE_LABELS[k]}`);
-    const text = parts.join(' · ');
+  /** Bag contents plus how full it is, e.g. "12 Wood · 3 Mat (15/30)". Hidden when empty. */
+  setBag(bag: Record<StoredResource, number>, limit: number): void {
+    const entries = (Object.entries(bag) as Array<[StoredResource, number]>).filter(([, v]) => v >= 1);
+    const total = entries.reduce((sum, [, v]) => sum + v, 0);
+    const parts = entries.map(([k, v]) => `${formatNumber(v)} ${RESOURCE_LABELS[k]}`);
+    const text = parts.length > 0 ? `${parts.join(' · ')} (${formatNumber(total)}/${formatNumber(limit)})` : '';
     if (text === this.bagText) return;
     this.bagText = text;
     this.bagLabel.setText(text).setVisible(text !== '');

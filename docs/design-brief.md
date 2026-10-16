@@ -45,7 +45,7 @@ Heat decays constantly. Jans burn wood to keep it up, but each Jan also adds to 
 A session plays like this:
 
 1. Open the app. The city is exactly as it was left; a short welcome-back card recaps heat, population and the next blizzard.
-2. Tap arriving Jans. Meagan walks over, the Jan thaws, a line of dialogue plays, and the Jan joins the idle pool.
+2. Tap arriving Jans. Meagan walks over, the Jan thaws, a line of dialogue plays, and the Jan walks to the job that needs him most (Lumber Yard first, then Hunting if eating outruns hunting, then by job share).
 3. Drag or tap idle Jans onto jobs. Spare Jans can be left idle at no cost beyond their food.
 4. Spend resources on the cheapest useful upgrade. The game should always surface one affordable or nearly affordable thing to buy.
 5. Check the forecast. If a blizzard is coming, stockpile wood or pull Jans off research onto chopping.
@@ -60,22 +60,23 @@ Five resources, and only Heat can run out with consequences. Everything else jus
 | Heat | Burning Wood at the Furnace | Drains automatically; each Jan and each building level adds to drain | Furnace level × 100 | Below 30%: jobs at half speed. At 0: one Jan leaves per minute until heat returns |
 | Wood | Chopping; Meagan in the forest | Furnace burn, most buildings, gear | 300 + 50 per Lumber Yard level, × Storehouse | The pacing resource; wood income vs burn rate is the core tension |
 | Food | Hunting; Meagan at the hunting grounds; animal kills | Each Jan eats 1/min | 150 × Storehouse | Short food = Jans work 25% slower. Never kills |
-| Materials | Building job, Scavenging after Tier 2, animal kills | Higher-tier buildings, furnace upgrades, gear | 100 × Storehouse | The slow resource that gates each tier |
+| Materials | Building job; Meagan at the scrap heap; Scavenging after Tier 2; animal kills | Higher-tier buildings, furnace upgrades, gear | 100 × Storehouse | The slow resource that gates each tier |
 | Knowledge | Research | Permanent multipliers in the Research tree | None | Only resource that is never wasted; always a good sink for spare Jans |
 
 A sixth resource, Warmth Tokens, is earned only at prestige and spent on permanent bonuses. It never resets.
 
 Storehouse multiplies every Wood, Food and Materials cap by 1.25 per level (compounding).
 
-**Start of a winter.** The city starts empty: 0 Jans, 0 of every resource and a cold furnace (heat 0). Furnace, Lumber Yard and Hunting Lodge are at Lv 1. Meagan rescues the first Jan herself and gathers the first resources by hand. Like the ads, she works automatically whenever she walks near the forest (5 Wood/s) or the hunting grounds (3 Food/s). Cold and hunger don't slow her.
+**Start of a winter.** The city starts empty: 0 Jans, 0 of every resource and a cold furnace (heat 0). Furnace, Lumber Yard and Hunting Lodge are at Lv 1. Meagan rescues the first Jan herself and gathers the first resources by hand. Like the ads, she works automatically whenever she walks near the forest (5 Wood/s), the hunting grounds (3 Food/s) or the scrap heap behind the furnace (1 Materials/s, enough to reach the first Workshop). Cold and hunger don't slow her.
 
 **Carrying and building (decided in Phase 3 planning).** Resources are physical, as in the ads:
 
-- Meagan carries a bag (20 units, all types together; the limit becomes upgradable later). Her hand-gathering goes into the bag.
+- Meagan carries a bag (20 units, all types together, +10 per Sled Shed level). Her hand-gathering goes into the bag.
 - Jans' output piles up at the producer: Wood at the Lumber Yard, Food in the food storage at the Hunting Lodge, Materials at the Workshop (at the furnace before there is a Workshop). Meagan picks Wood and Materials up by walking past. Jans eat from the food storage automatically, at a steady rate.
 - The furnace burns only Wood that Meagan delivers into it (it holds 30 Wood per Furnace level). Walking past the furnace tops it up first.
 - The map has empty plots. Tapping one walks her there and offers the building types; the chosen one becomes a construction site. Tapping a built building walks her there and starts its next upgrade. Walking near a site that is under construction or upgrading magnetically pulls what it needs out of her bag into its progress bar; when the bar is full it is built or levels up.
 - Tapping the ground walks her there, routing around buildings.
+- Frozen Jans wait at fixed spots on the map edge (caravans line up along the top edge). Tapping one walks her out to thaw him; if the city is full he stays frozen and a "No room" message suggests the Furnace or a Bunkhouse.
 
 ## Jobs
 
@@ -113,6 +114,7 @@ The Furnace is the tier gate: each Furnace level raises the Jan cap and unlocks 
 | Hot Springs | Heat drain down 10% per level | 5 | — | Tier 3 (Furnace Lv 7) |
 | Barracks | Guarding rate; Weapons, Armour and guard kits are crafted here | 20 | — | Furnace Lv 2 |
 | Signal Beacon | Caravans come 8% sooner per level | 10 | — | Furnace Lv 2 |
+| Sled Shed | Meagan carries +10 per level (base 20) | 10 | — | Start |
 
 Every level of every building except the Furnace adds 0.05 heat/s to the drain, so growth always leans on the furnace.
 
@@ -136,6 +138,7 @@ where n is the number of upgrades already bought (level minus the starting level
 | Storehouse, Kitchen | 40 Wood + 5 Materials | 1.15 | Wood, Materials |
 | Workshop, Research Hut, Barracks | 60 Wood + 10 Materials | 1.15 | Wood, Materials |
 | Bunkhouse, Watchtower, Hot Springs, Expedition Post, Signal Beacon | 120 Wood + 30 Materials | 1.25 | Wood, Materials |
+| Sled Shed | 30 Wood | 1.3 | Wood |
 | Furnace level | 100 Wood + 20 Materials (Lv 1→2 is Wood only, before Materials exist) | 1.8 | Wood, Materials |
 | Weapons, Armour level | 50 Wood + 15 Materials | 1.3 | Wood, Materials |
 | Guard kit | 20 Wood + 5 Materials | 1.3 per Weapons + Armour level | Wood, Materials |
@@ -279,7 +282,7 @@ A mobile-first web game built on Windows with Claude Code and published to GitHu
 1. **Scaffold.** Vite + TypeScript + Phaser project, portrait layout scaled to an iPhone screen, manifest and iOS meta tags, a snowy background with the furnace and a heat bar. Runs with `npm run dev`.
 2. **Engine.** Implement the Economy section in `src/engine/`: resources, Jans, jobs, buildings, costs, blizzards, tick loop, pause on hide, save/load, export/import code, and the unit tests. Wire the heat bar to the real engine.
 3. **Meagan.** A controllable character with a placeholder sprite: tap to walk with pathfinding around buildings; tapping a building walks her there and performs its action. Also brought forward from Phase 4: plots, construction sites, her bag, piles and furnace fuel (see Carrying and building).
-4. **Carrying and rescues.** Upgradable carry limit; frozen Jans arrive at the map edge and she must walk out to thaw them.
+4. **Carrying and rescues.** Sled Shed (carry limit), scrap heap (early Materials), frozen Jans at the map edge that she walks out to thaw, and thawed Jans walking to the neediest job until the Jans screen exists.
 5. **Screens.** Build, Jans and Collection screens as overlays driven by the engine; placeholder shapes for art.
 6. **Content and juice.** Load the JSON content, milestones, rescue bubbles, idle chatter, blizzard banner, welcome-back card, number animations, sound effects.
 7. **Prestige and polish.** Thaw cutscene, Warmth Token shop, tier visuals, app icon, GitHub Pages deployment with a GitHub Actions workflow.

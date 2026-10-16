@@ -2,7 +2,7 @@
 import { ANIMALS, ATTACK, GUARDS, MEAGAN, WATCHTOWER_ARROWS } from './balance';
 import { armourLossMult, guardDamage, tierOf, weaponsMult } from './economy';
 import { addCapped, type TickContext } from './events';
-import { FURNACE, JOB_SITES, distance, moveTowards, siteOf } from './map';
+import { FURNACE, distance, jobSite, moveTowards, siteOf } from './map';
 import { between, intBetween, type Rng } from './rng';
 import type { Animal, AnimalKind, GameState, GuardUnit, Point } from './types';
 
@@ -122,7 +122,7 @@ function nearestDefender(s: GameState, p: Point, within: number): Defender | nul
 function jobSiteOf(s: GameState, janId: number): Point | null {
   const jan = s.jans.find((j) => j.id === janId);
   if (!jan || jan.job === 'idle' || jan.job === 'guard') return null;
-  return JOB_SITES[jan.job];
+  return jobSite(s, jan.job);
 }
 
 export function updateAttacks(s: GameState, dt: number, ctx: TickContext): void {

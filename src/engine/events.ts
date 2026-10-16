@@ -1,8 +1,9 @@
 // Timed pressure and arrivals: blizzards, Long Nights, Jan arrivals, caravans, scavenging, heat-zero departures.
 import { ARRIVALS, BLIZZARD, BUILDINGS, CARAVAN, HEAT, KEYS_BONUS, SCAVENGE, VARIANTS } from './balance';
-import { caps, caravanGap, grossRates, isUnlocked, janJobMult, scavengeBurst, scavengeInterval, tierOf } from './economy';
+import { caps, caravanGap, grossRates, isUnlocked, janCap, janJobMult, neediestJob, scavengeBurst, scavengeInterval, tierOf } from './economy';
+import { ARRIVAL_SPOTS, CARAVAN_SPOTS } from './map';
 import { between, intBetween, pickWeighted, type Rng } from './rng';
-import type { BuildingKey, EngineEvent, GameState, ResourceKey, StoredResource, VariantKey } from './types';
+import type { BuildingKey, EngineEvent, GameState, Jan, Point, ResourceKey, StoredResource, VariantKey } from './types';
 
 export interface TickContext {
   rng: Rng;
@@ -63,10 +64,18 @@ export function pickVariant(s: GameState, rng: Rng, rareOnly = false): VariantKe
   return pickWeighted(rng, weights);
 }
 
+/** First spot nobody is waiting on (spots are fixed, so exact matches are fine). */
+function freeSpot(s: GameState, spots: Point[]): Point {
+  return spots.find((p) => !s.waiting.some((w) => w.x === p.x && w.y === p.y)) ?? spots[0];
+}
+
 function addArrival(s: GameState, variant: VariantKey | null, fromCaravan: boolean, returning: boolean): number {
   const id = s.nextId++;
+  const at = freeSpot(s, fromCaravan ? CARAVAN_SPOTS : ARRIVAL_SPOTS);
   s.waiting.push({
     id,
+    x: at.x,
+    y: at.y,
     variant,
     fromCaravan,
     returning,
@@ -104,6 +113,26 @@ export function updateArrivals(s: GameState, dt: number, ctx: TickContext, arriv
     }
     ctx.emit({ type: 'caravan', count });
   }
+}
+
+/** Thaw a waiting Jan; he heads for the neediest job. When the city is full he stays frozen and rescueBlocked fires. */
+export function rescueArrival(s: GameState, arrivalId: number, ctx: TickContext): Jan | null {
+  const i = s.waiting.findIndex((w) => w.id === arrivalId);
+  if (i < 0 || s.meagan.injured) return null;
+  if (s.jans.length >= janCap(s)) {
+    ctx.emit({ type: 'rescueBlocked', id: arrivalId });
+    return null;
+  }
+  const [w] = s.waiting.splice(i, 1);
+  const jan: Jan = { id: w.id, variant: w.variant ?? pickVariant(s, ctx.rng), job: neediestJob(s), hasKit: false };
+  s.jans.push(jan);
+  ctx.emit({ type: 'rescued', jan, returning: w.returning, from: { x: w.x, y: w.y } });
+  if (jan.variant === 'keys' && !w.returning) {
+    const bonus = keysBonus(s, ctx.rng);
+    addCapped(s, bonus.resource, bonus.amount);
+    ctx.emit({ type: 'keysBonus', ...bonus });
+  }
+  return jan;
 }
 
 /** Lost-His-Keys Jan finds some of a random resource on rescue. */

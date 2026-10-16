@@ -1,8 +1,8 @@
 // Meagan's rules: walking her path, acting on arrival, gathering by hand, and the magnet between her bag, piles and sites.
 import { BUILDINGS, MAGNET, MEAGAN } from './balance';
-import { bagTotal, caps, fuelCap, remainingCost } from './economy';
-import type { TickContext } from './events';
-import { FOREST, HUNTING_GROUNDS, SITES, distance, moveTowards, pileSiteIndex } from './map';
+import { bagTotal, caps, carryLimit, fuelCap, remainingCost } from './economy';
+import { rescueArrival, type TickContext } from './events';
+import { FOREST, HUNTING_GROUNDS, SCRAP_HEAP, SITES, distance, moveTowards, pileSiteIndex } from './map';
 import type { GameState, Meagan, StoredResource } from './types';
 
 /** Resources she can pick up from a pile to deliver elsewhere. Food only ever goes into the food storage. */
@@ -30,10 +30,15 @@ function walk(m: Meagan, step: number): void {
   }
 }
 
-/** Empty plot → ask what to build. Built building → start its next upgrade. */
+/** Frozen Jan → thaw him. Empty plot → ask what to build. Built building → start its next upgrade. */
 function arrive(s: GameState, ctx: TickContext): void {
-  const i = s.meagan.goal!.site;
+  const goal = s.meagan.goal!;
   s.meagan.goal = null;
+  if (goal.kind === 'arrival') {
+    rescueArrival(s, goal.id, ctx);
+    return;
+  }
+  const i = goal.site;
   const site = s.sites[i];
   const key = site.building;
   if (!key) {
@@ -45,15 +50,16 @@ function arrive(s: GameState, ctx: TickContext): void {
   ctx.emit({ type: 'upgradeStarted', site: i, building: key });
 }
 
-/** She gathers into her bag near the forest or the hunting grounds. Cold and hunger don't slow her. */
+/** She gathers into her bag near the forest, the hunting grounds or the scrap heap. Cold and hunger don't slow her. */
 function gather(s: GameState, dt: number): void {
   const m = s.meagan;
   if (distance(m, FOREST) <= MEAGAN.gatherRange) m.bag.wood += Math.min(MEAGAN.woodPerSecond * dt, room(s));
   if (distance(m, HUNTING_GROUNDS) <= MEAGAN.gatherRange) m.bag.food += Math.min(MEAGAN.foodPerSecond * dt, room(s));
+  if (distance(m, SCRAP_HEAP) <= MEAGAN.gatherRange) m.bag.materials += Math.min(MEAGAN.materialsPerSecond * dt, room(s));
 }
 
 function room(s: GameState): number {
-  return Math.max(0, MEAGAN.carryLimit - bagTotal(s));
+  return Math.max(0, carryLimit(s) - bagTotal(s));
 }
 
 /** Take up to `limit` of a resource out of her bag; returns how much came out. */

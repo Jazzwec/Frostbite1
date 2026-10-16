@@ -98,6 +98,12 @@ export const CARAVAN = {
   beaconSoonerPerLevel: 0.08,
 } as const;
 
+/** A thawed Jan walks to the job that needs him most. [planned] */
+export const AUTO_JOB = {
+  /** Target share of Jans per job; ties go to the earlier job. Guarding and scavenging stay manual. */
+  weights: { chop: 3, hunt: 2, build: 2, research: 1 } satisfies Partial<Record<JobKey, number>>,
+};
+
 /** Lost-His-Keys Jan finds this many seconds of the city's gross output for a random resource. [planned] */
 export const KEYS_BONUS = { seconds: 45, minimum: 20, minimumMaterials: 5 } as const;
 
@@ -131,14 +137,18 @@ export const MEAGAN = {
   gatherRange: 70,
   woodPerSecond: 5,
   foodPerSecond: 3,
+  /** Hand-scavenging at the scrap heap: slow, just enough to reach the first Workshop. [planned] */
+  materialsPerSecond: 1,
   /** Combat. [planned] */
   hp: 100,
   damagePerSecond: 10,
   range: 60,
   /** Walking speed in map units per second (animals 40, guards 60). [planned] */
   walkSpeed: 160,
-  /** Most resources she can carry at once, all types together. Upgrades come later. [planned] */
+  /** Most resources she can carry at once, all types together, before any Sled Shed. [planned] */
   carryLimit: 20,
+  /** Each Sled Shed level lets her carry this much more. [planned] */
+  carryPerSledLevel: 10,
 } as const;
 
 /** Resources jump between Meagan's bag and a pile or site she walks near. [planned] */
@@ -231,6 +241,8 @@ export const BUILDINGS: Record<BuildingKey, BuildingDef> = {
   hotSprings: { max: 5, unlockFurnace: 7, start: 0, cost: { wood: 120, materials: 30 }, growth: 1.25 },
   barracks: { max: 20, unlockFurnace: 2, start: 0, cost: { wood: 60, materials: 10 }, growth: 1.15 },
   signalBeacon: { max: 10, unlockFurnace: 2, start: 0, cost: { wood: 120, materials: 30 }, growth: 1.25 },
+  // Sled Shed raises Meagan's carry limit. Wood only, so it's the first thing she can build. [planned]
+  sledShed: { max: 10, unlockFurnace: 1, start: 0, cost: { wood: 30, materials: 0 }, growth: 1.3 },
 };
 
 // ---------- Blizzards ----------

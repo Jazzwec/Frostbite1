@@ -1,13 +1,16 @@
 import Phaser from 'phaser';
 import { buildingName } from '../content';
-import { buildingCost, heatCap } from '../engine/economy';
-import { FOREST, HUNTING_GROUNDS, SITES, distance } from '../engine/map';
-import type { EngineEvent, Point, Rect } from '../engine/types';
+import { CARAVAN } from '../engine/balance';
+import { buildingCost, carryLimit, heatCap } from '../engine/economy';
+import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
+import { findPath } from '../engine/pathfinding';
+import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
 import { devFlags, engine } from '../game/runtime';
 import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
-import { formatCost } from '../ui/format';
+import { JOB_LABELS, formatCost } from '../ui/format';
 import { HeatBar } from '../ui/HeatBar';
+import { JanSprite } from '../ui/JanSprite';
 import { MeaganSprite } from '../ui/MeaganSprite';
 import { SiteView } from '../ui/SiteView';
 import { ORIGIN, toScreen, toWorld } from './coords';
@@ -16,8 +19,12 @@ const HORIZON = 560;
 const FURNACE_X = ORIGIN.x;
 const FURNACE_Y = ORIGIN.y; // base of the furnace
 
-/** Tapping within this many map units of the forest or hunting grounds walks her right onto the spot. */
+/** Tapping within this many map units of a gathering spot walks her right onto it. */
 const GATHER_TAP_RADIUS = 100;
+/** Tap radius around a frozen Jan's body (≥ 44 pt on the phone). */
+const FROZEN_TAP_RADIUS = 55;
+/** Jans sharing a job stand in a little group around its work spot. */
+const CROWD = { perRow: 4, dx: 26, dy: 24 } as const;
 
 /** Draw order: background < world (sorted by screen y) < snowfall < debug < HUD < menus. */
 const DEPTH = { background: -10000, snowfall: 5000, debug: 9000, hud: 10000 } as const;
@@ -28,6 +35,10 @@ export class CityScene extends Phaser.Scene {
   private sites: SiteView[] = [];
   private picker!: BuildPicker;
   private debug!: Phaser.GameObjects.Graphics;
+  private readonly frozen = new Map<number, JanSprite>();
+  private readonly jans = new Map<number, JanSprite>();
+  /** Where a just-thawed Jan starts walking from (map units), keyed by Jan id. */
+  private readonly thawedAt = new Map<number, Point>();
 
   constructor() {
     super('City');
@@ -62,23 +73,36 @@ export class CityScene extends Phaser.Scene {
     this.syncHeat();
     for (const v of this.sites) v.sync(s);
     this.meagan.follow(toScreen(s.meagan), s.meagan.path.length > 0, delta);
-    this.meagan.setBag(s.meagan.bag);
+    this.meagan.setBag(s.meagan.bag, carryLimit(s));
+    this.syncJans(s, delta);
     this.drawDebug();
   }
 
   /** A tap on open map: a site walks her there to act, the gathering spots walk her onto them, anywhere else just walks. */
   private onTap(p: Point): void {
+    const frozen = engine.state.waiting.find((w) => distance({ x: w.x, y: w.y - 50 }, p) <= FROZEN_TAP_RADIUS);
+    if (frozen) {
+      if (engine.tapArrival(frozen.id)) this.tapMarker(frozen);
+      return;
+    }
     const site = SITES.findIndex((_, i) => contains(hitRect(i), p));
     if (site >= 0) {
       if (engine.tapSite(site)) this.tapMarker(SITES[site].drop);
       return;
     }
-    const spot = [FOREST, HUNTING_GROUNDS].find((g) => distance(g, p) <= GATHER_TAP_RADIUS);
+    const spot = [FOREST, HUNTING_GROUNDS, SCRAP_HEAP].find((g) => distance(g, p) <= GATHER_TAP_RADIUS);
     if (engine.walkTo(spot ?? p)) this.tapMarker(engine.state.meagan.path.at(-1)!);
   }
 
   private onEvent(e: EngineEvent): void {
     if (e.type === 'plotReached') this.picker.open(e.site);
+    else if (e.type === 'rescued') {
+      this.thawedAt.set(e.jan.id, e.from);
+      this.floater(above(e.from), `Jan thawed! → ${JOB_LABELS[e.jan.job]}`);
+    } else if (e.type === 'rescueBlocked') {
+      const w = engine.state.waiting.find((a) => a.id === e.id);
+      if (w) this.floater(above(w), 'No room!\nUpgrade the Furnace or build a Bunkhouse');
+    } else if (e.type === 'caravan') this.floater(above(CARAVAN_SPOTS[3]), `A caravan of ${e.count} Jans arrived!`);
     else if (e.type === 'upgradeStarted') {
       const cost = buildingCost(e.building, engine.state.buildings[e.building]);
       this.floater(this.sites[e.site].top, `Bring ${formatCost(cost)}`);
@@ -106,12 +130,54 @@ export class CityScene extends Phaser.Scene {
         color: CSS.ink,
         backgroundColor: CSS.ice,
         padding: { x: 10, y: 4 },
+        align: 'center',
       })
       .setOrigin(0.5, 1)
       .setDepth(DEPTH.hud - 1);
     // Keep it on screen near the edges.
     t.x = Phaser.Math.Clamp(t.x, t.width / 2 + 8, GAME_WIDTH - t.width / 2 - 8);
     this.tweens.add({ targets: t, y: at.y - 60, alpha: 0, delay: 1200, duration: 700, onComplete: () => t.destroy() });
+  }
+
+  /** Frozen Jans wait at the edge; thawed Jans walk to their job's spot and work there. */
+  private syncJans(s: GameState, delta: number): void {
+    const waiting = new Set(s.waiting.map((w) => w.id));
+    for (const [id, sprite] of this.frozen) {
+      if (!waiting.has(id)) {
+        sprite.destroy();
+        this.frozen.delete(id);
+      }
+    }
+    for (const w of s.waiting) {
+      let sprite = this.frozen.get(w.id);
+      if (!sprite) this.frozen.set(w.id, (sprite = new JanSprite(this, toScreen(w), true)));
+      sprite.setTimer(w.leavesAt === null ? null : (w.leavesAt - s.t) / CARAVAN.waitSeconds);
+    }
+
+    const present = new Set(s.jans.map((j) => j.id));
+    for (const [id, sprite] of this.jans) {
+      if (!present.has(id)) {
+        sprite.destroy();
+        this.jans.delete(id);
+      }
+    }
+    const crowd = new Map<string, number>();
+    for (const jan of [...s.jans].sort((a, b) => a.id - b.id)) {
+      const k = crowd.get(jan.job) ?? 0;
+      crowd.set(jan.job, k + 1);
+      const spot = workSpot(s, jan, k);
+      let sprite = this.jans.get(jan.id);
+      if (!sprite) {
+        const from = this.thawedAt.get(jan.id) ?? spot;
+        this.thawedAt.delete(jan.id);
+        this.jans.set(jan.id, (sprite = new JanSprite(this, toScreen(from), false)));
+      }
+      if (!sprite.target || sprite.target.x !== spot.x || sprite.target.y !== spot.y) {
+        sprite.target = spot;
+        sprite.walk(findPath(engine.nav, toWorld(sprite), spot).map(toScreen));
+      }
+      sprite.tick(delta);
+    }
   }
 
   /** Dev only: frostbite.debugPath = true shows blocked cells and her current path. */
@@ -184,7 +250,7 @@ export class CityScene extends Phaser.Scene {
     g.lineStyle(4, COLOURS.line, 1).strokeEllipse(FURNACE_X, FURNACE_Y, 560, 150);
   }
 
-  /** Placeholder forest (Wood) and hunting grounds (Food) where Meagan gathers by hand. */
+  /** Placeholder forest (Wood), hunting grounds (Food) and scrap heap (Materials) where Meagan gathers by hand. */
   private drawGatherSpots(): void {
     const forest = toScreen(FOREST);
     const trees: Array<[number, number, number]> = [
@@ -220,9 +286,27 @@ export class CityScene extends Phaser.Scene {
       bushes.fillStyle(COLOURS.ember, 1).fillCircle(hunt.x + dx - 10, hunt.y + dy - 4, 4).fillCircle(hunt.x + dx + 8, hunt.y + dy + 4, 4);
     }
 
+    // A wrecked sled with spilled crates.
+    const scrap = toScreen(SCRAP_HEAP);
+    this.add.ellipse(scrap.x, scrap.y, 140, 40, COLOURS.snowDeep, 1).setDepth(DEPTH.background + 1);
+    const wreck = this.add.graphics().setDepth(scrap.y - 10);
+    wreck.lineStyle(6, COLOURS.slate, 1).lineBetween(scrap.x - 60, scrap.y - 10, scrap.x + 10, scrap.y - 22);
+    wreck.lineStyle(6, COLOURS.slate, 1).lineBetween(scrap.x - 55, scrap.y - 2, scrap.x + 15, scrap.y - 14);
+    wreck.fillStyle(COLOURS.timber, 1).fillRect(scrap.x - 50, scrap.y - 44, 52, 22);
+    wreck.lineStyle(4, COLOURS.ink, 1).strokeRect(scrap.x - 50, scrap.y - 44, 52, 22);
+    for (const [dx, dy, size] of [
+      [22, -40, 34],
+      [44, -24, 26],
+    ]) {
+      wreck.fillStyle(COLOURS.timber, 1).fillRect(scrap.x + dx, scrap.y + dy, size, size);
+      wreck.lineStyle(4, COLOURS.ink, 1).strokeRect(scrap.x + dx, scrap.y + dy, size, size);
+      wreck.lineBetween(scrap.x + dx, scrap.y + dy, scrap.x + dx + size, scrap.y + dy + size);
+    }
+
     const label = { fontFamily: FONT, fontSize: '22px', color: CSS.slate };
     this.add.text(forest.x, forest.y + 22, 'Forest', label).setOrigin(0.5, 0).setDepth(DEPTH.background + 2);
     this.add.text(hunt.x, hunt.y + 22, 'Hunting', label).setOrigin(0.5, 0).setDepth(DEPTH.background + 2);
+    this.add.text(scrap.x, scrap.y + 18, 'Scrap', label).setOrigin(0.5, 0).setDepth(DEPTH.background + 2);
   }
 
   private drawFurnace(): void {
@@ -323,6 +407,18 @@ function hitRect(i: number): Rect {
   const f = SITES[i].footprint;
   if (SITES[i].fixed === 'furnace') return { x: -170, y: -330, w: 340, h: 360 };
   return { x: f.x - 10, y: f.y - 120, w: f.w + 20, h: f.h + 150 };
+}
+
+/** Where the k-th Jan on a job stands: grouped around the job's spot, or by the furnace when it has none. */
+function workSpot(s: GameState, jan: Jan, k: number): Point {
+  const base = (jan.job !== 'idle' && jobSite(s, jan.job)) || { x: MEAGAN_START.x + 90, y: MEAGAN_START.y + 30 };
+  return { x: base.x + ((k % CROWD.perRow) - (CROWD.perRow - 1) / 2) * CROWD.dx, y: base.y + Math.floor(k / CROWD.perRow) * CROWD.dy };
+}
+
+/** Screen point above a figure standing at a map point, for floating messages. */
+function above(p: Point): Point {
+  const q = toScreen(p);
+  return { x: q.x, y: q.y - 150 };
 }
 
 function contains(r: Rect, p: Point): boolean {

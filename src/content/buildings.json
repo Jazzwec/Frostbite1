@@ -11,5 +11,6 @@
   "watchtower": { "name": "Watchtower" },
   "hotSprings": { "name": "Hot Springs" },
   "barracks": { "name": "Barracks" },
-  "signalBeacon": { "name": "Signal Beacon" }
+  "signalBeacon": { "name": "Signal Beacon" },
+  "sledShed": { "name": "Sled Shed" }
 }

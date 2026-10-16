@@ -28,6 +28,8 @@ describe('cost curve', () => {
   });
 
   it('prices the new buildings like their class', () => {
+    expect(buildingCost('sledShed', 0)).toEqual({ wood: 30 });
+    expect(buildingCost('sledShed', 1)).toEqual({ wood: 39 });
     expect(buildingCost('barracks', 0)).toEqual({ wood: 60, materials: 10 });
     expect(buildingCost('signalBeacon', 0)).toEqual({ wood: 120, materials: 30 });
     expect(buildingCost('signalBeacon', 3)).toEqual({ wood: Math.ceil(120 * 1.25 ** 3), materials: Math.ceil(30 * 1.25 ** 3) });

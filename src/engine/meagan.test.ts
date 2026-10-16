@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FUEL, MAGNET, MEAGAN } from './balance';
 import { GameEngine } from './GameEngine';
-import { FOREST, MEAGAN_START, SITES, distance } from './map';
+import { FOREST, MEAGAN_START, SCRAP_HEAP, SITES, distance } from './map';
 import { isBlocked } from './pathfinding';
 import type { EngineEvent } from './types';
 
@@ -63,6 +63,21 @@ describe('carrying', () => {
     run(e, 10);
     expect(e.state.meagan.bag.wood).toBeCloseTo(MEAGAN.carryLimit);
     expect(e.state.resources.wood).toBe(0);
+  });
+
+  it('scavenges Materials by hand at the scrap heap', () => {
+    const e = new GameEngine({ seed: 1 });
+    e.setMeaganPosition(SCRAP_HEAP);
+    run(e, 5);
+    expect(e.state.meagan.bag.materials).toBeCloseTo(MEAGAN.materialsPerSecond * 5);
+  });
+
+  it('carries more with each Sled Shed level', () => {
+    const e = new GameEngine({ seed: 1 });
+    e.state.buildings.sledShed = 2;
+    e.setMeaganPosition(FOREST);
+    run(e, 20);
+    expect(e.state.meagan.bag.wood).toBeCloseTo(MEAGAN.carryLimit + 2 * MEAGAN.carryPerSledLevel);
   });
 
   it('feeds the furnace up to its fuel cap', () => {
@@ -132,6 +147,18 @@ describe('building', () => {
     expect(events).toContainEqual({ type: 'buildingUpgraded', site: PLOT, building: 'storehouse', level: 1 });
     expect(e.state.sites[PLOT]).toMatchObject({ upgrading: false, progress: {} });
     expect(m.bag.wood).toBeCloseTo(15); // only what was needed was taken
+  });
+
+  it('builds a Sled Shed from Wood alone', () => {
+    const e = new GameEngine({ seed: 1 });
+    e.setMeaganPosition(AWAY);
+    expect(e.chooseBuilding(PLOT, 'sledShed')).toBe(true);
+    e.state.meagan.bag.wood = 20;
+    e.tapSite(PLOT);
+    run(e, 4);
+    e.state.meagan.bag.wood = 20;
+    run(e, 2);
+    expect(e.state.buildings.sledShed).toBe(1);
   });
 
   it('blocks walking once a plot has a building', () => {

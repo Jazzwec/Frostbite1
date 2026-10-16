@@ -13,13 +13,12 @@ import {
   heatDrain,
   heatPerWood,
   isUnlocked,
-  janCap,
   jobRate,
   jobUnlocked,
   kitCost,
   type Cost,
 } from './economy';
-import { addCapped, keysBonus, pickVariant, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
+import { rescueArrival, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
 import { MAP_BOUNDS, MEAGAN_START, SITES, siteIndexOf } from './map';
 import { updateMeagan } from './meagan';
 import { buildGrid, findPath, type NavGrid } from './pathfinding';
@@ -256,21 +255,17 @@ export class GameEngine {
     return true;
   }
 
-  /** Thaw a waiting Jan into the idle pool. */
+  /** Thaw a waiting Jan on the spot (dev/tests; in play Meagan walks out via tapArrival). He heads for the neediest job. */
   rescue(arrivalId: number): Jan | null {
-    const s = this.state;
-    const i = s.waiting.findIndex((w) => w.id === arrivalId);
-    if (i < 0 || s.jans.length >= janCap(s) || s.meagan.injured) return null;
-    const [w] = s.waiting.splice(i, 1);
-    const jan: Jan = { id: w.id, variant: w.variant ?? pickVariant(s, this.rng), job: 'idle', hasKit: false };
-    s.jans.push(jan);
-    this.ctx.emit({ type: 'rescued', jan, returning: w.returning });
-    if (jan.variant === 'keys' && !w.returning) {
-      const bonus = keysBonus(s, this.rng);
-      addCapped(s, bonus.resource, bonus.amount);
-      this.ctx.emit({ type: 'keysBonus', ...bonus });
-    }
-    return jan;
+    return rescueArrival(this.state, arrivalId, this.ctx);
+  }
+
+  /** Walk Meagan out to a frozen Jan; she thaws him when she gets there. */
+  tapArrival(id: number): boolean {
+    const w = this.state.waiting.find((a) => a.id === id);
+    if (!w || !this.walkTo(w)) return false;
+    this.state.meagan.goal = { kind: 'arrival', id };
+    return true;
   }
 
   private pay(cost: Cost): void {

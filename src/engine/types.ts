@@ -14,7 +14,8 @@ export type BuildingKey =
   | 'watchtower'
   | 'hotSprings'
   | 'barracks'
-  | 'signalBeacon';
+  | 'signalBeacon'
+  | 'sledShed';
 
 export type JobKey = 'chop' | 'hunt' | 'build' | 'research' | 'scavenge' | 'guard';
 export type Assignment = JobKey | 'idle';
@@ -44,8 +45,8 @@ export interface Jan {
   hasKit: boolean;
 }
 
-/** A Jan waiting at the map edge to be rescued. */
-export interface Arrival {
+/** A Jan waiting frozen at the map edge (at x, y) to be rescued. */
+export interface Arrival extends Point {
   id: number;
   /** Fixed for caravan rares and returning Jans; otherwise rolled on rescue. */
   variant: VariantKey | null;
@@ -90,7 +91,7 @@ export interface Meagan extends Point {
   /** Resources she is carrying. */
   bag: Record<StoredResource, number>;
   /** The site she was sent to; its action runs when she arrives. */
-  goal: { kind: 'site'; site: number } | null;
+  goal: { kind: 'site'; site: number } | { kind: 'arrival'; id: number } | null;
 }
 
 /** One building spot on the map (see SITES in map.ts). */
@@ -159,7 +160,8 @@ export type EngineEvent =
   | { type: 'arrival'; id: number }
   | { type: 'caravan'; count: number }
   | { type: 'caravanLeft'; count: number }
-  | { type: 'rescued'; jan: Jan; returning: boolean }
+  | { type: 'rescued'; jan: Jan; returning: boolean; from: Point }
+  | { type: 'rescueBlocked'; id: number }
   | { type: 'keysBonus'; resource: ResourceKey; amount: number }
   | { type: 'burst'; resource: ResourceKey; amount: number }
   | { type: 'cache'; resource: 'materials'; amount: number }

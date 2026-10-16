@@ -1,6 +1,7 @@
 // Pure rules derived from state: costs, caps, heat, rates. No mutation here.
 import {
   ARRIVALS,
+  AUTO_JOB,
   BLIZZARD,
   BUILDINGS,
   CAPS,
@@ -12,11 +13,12 @@ import {
   HEAT,
   JAN_CAP,
   JOBS,
+  MEAGAN,
   SCAVENGE,
   TIER_STARTS,
   VARIANTS,
 } from './balance';
-import type { BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, SiteState, StoredResource } from './types';
+import type { Assignment, BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, SiteState, StoredResource } from './types';
 
 export type Cost = Partial<Record<ResourceKey, number>>;
 
@@ -82,6 +84,11 @@ export function remainingCost(s: GameState, site: SiteState): Cost {
     if (left > 1e-6) out[k] = left; // tolerance for fractional deliveries
   }
   return out;
+}
+
+/** Most Meagan can carry: the base bag plus the Sled Shed. */
+export function carryLimit(s: GameState): number {
+  return MEAGAN.carryLimit + MEAGAN.carryPerSledLevel * s.buildings.sledShed;
 }
 
 export function bagTotal(s: GameState): number {
@@ -194,6 +201,22 @@ export function foodEaten(s: GameState): number {
   for (const j of s.jans) n += VARIANTS[j.variant].foodMult ?? 1;
   const kitchen = Math.max(0, 1 - FOOD.kitchenReductionPerLevel * s.buildings.kitchen);
   return n * FOOD.perJanPerSecond * kitchen;
+}
+
+type AutoJob = keyof typeof AUTO_JOB.weights;
+
+/**
+ * The job a newly thawed Jan walks to: the Lumber Yard first, then Hunting if eating (his included) outruns hunting,
+ * then whichever unlocked job is furthest below its share in AUTO_JOB.weights.
+ */
+export function neediestJob(s: GameState): Assignment {
+  const weights = AUTO_JOB.weights;
+  const open = (Object.keys(weights) as AutoJob[]).filter((j) => jobUnlocked(s, j));
+  if (open.length === 0) return 'idle';
+  const count = (job: JobKey): number => s.jans.filter((j) => j.job === job).length;
+  if (open.includes('chop') && count('chop') === 0) return 'chop';
+  if (open.includes('hunt') && jobRate(s, 'hunt') < foodEaten(s) + FOOD.perJanPerSecond) return 'hunt';
+  return open.reduce((best, j) => (count(j) / weights[j] < count(best) / weights[best] ? j : best));
 }
 
 export function scavengeInterval(s: GameState): number {

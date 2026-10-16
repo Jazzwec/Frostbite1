@@ -1,6 +1,6 @@
 // Player-facing number and cost formatting.
 import type { Cost } from '../engine/economy';
-import type { ResourceKey } from '../engine/types';
+import type { Assignment, ResourceKey } from '../engine/types';
 
 const SUFFIXES = ['', 'K', 'M', 'B', 'T'];
 
@@ -20,6 +20,16 @@ export const RESOURCE_LABELS: Record<ResourceKey, string> = {
   food: 'Food',
   materials: 'Mat',
   knowledge: 'Know',
+};
+
+export const JOB_LABELS: Record<Assignment, string> = {
+  chop: 'Chopping',
+  hunt: 'Hunting',
+  build: 'Building',
+  research: 'Research',
+  scavenge: 'Scavenging',
+  guard: 'Guarding',
+  idle: 'Idle',
 };
 
 /** { wood: 40, materials: 5 } → "40 Wood · 5 Mat". */

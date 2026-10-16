@@ -1,4 +1,5 @@
 // City layout in engine units. The furnace sits at the origin; the renderer maps these to screen pixels (1 unit = 1 logical px).
+import { JOBS } from './balance';
 import type { Bounds } from './pathfinding';
 import type { BuildingKey, GameState, JobKey, Point, Rect, StoredResource } from './types';
 
@@ -10,15 +11,19 @@ export const MAP_BOUNDS: Bounds = { minX: -370, minY: -400, maxX: 370, maxY: 660
 /** Where Meagan gathers by hand. */
 export const FOREST: Point = { x: -320, y: -260 };
 export const HUNTING_GROUNDS: Point = { x: 320, y: -260 };
+/** A wrecked sled behind the furnace where she scavenges Materials by hand. */
+export const SCRAP_HEAP: Point = { x: -80, y: -360 };
 
-/** Where Jans stand while working each job. Guards use the ring around the furnace instead. */
-export const JOB_SITES: Record<Exclude<JobKey, 'guard'>, Point> = {
-  chop: { x: -220, y: -160 },
-  hunt: { x: 220, y: -160 },
-  build: { x: -240, y: 120 },
-  research: { x: 240, y: 120 },
-  scavenge: { x: 0, y: 280 },
-};
+/** Edge spots where single Jans stagger in, clear of every site. */
+export const ARRIVAL_SPOTS: Point[] = [
+  { x: -355, y: -10 },
+  { x: 355, y: -10 },
+  { x: -135, y: 645 },
+  { x: 135, y: 645 },
+];
+
+/** Caravan Jans line up along the top edge, just below the horizon. */
+export const CARAVAN_SPOTS: Point[] = Array.from({ length: 7 }, (_, i) => ({ x: -240 + i * 60, y: -385 }));
 
 export interface SiteDef {
   /** Buildings that start in place; every other site is an empty plot. */
@@ -50,8 +55,9 @@ export const SITES: SiteDef[] = [
   plot(-270, 440),
   plot(0, 440),
   plot(270, 440),
-  plot(-135, 600),
-  plot(135, 600),
+  plot(-270, 600),
+  plot(0, 600),
+  plot(270, 600),
 ];
 
 export const MEAGAN_START: Point = SITES[0].drop;
@@ -60,6 +66,7 @@ export const PLACES = {
   furnace: MEAGAN_START,
   forest: FOREST,
   hunting: HUNTING_GROUNDS,
+  scrap: SCRAP_HEAP,
 } as const;
 export type PlaceKey = keyof typeof PLACES;
 
@@ -72,6 +79,13 @@ export function siteIndexOf(s: GameState, key: BuildingKey): number {
 export function siteOf(s: GameState, key: BuildingKey): Point | null {
   const i = siteIndexOf(s, key);
   return i < 0 ? null : SITES[i].drop;
+}
+
+/** Where Jans on a job stand: just left of the front of that job's building, or null until it's placed. Guards use the furnace ring. */
+export function jobSite(s: GameState, job: JobKey): Point | null {
+  if (job === 'guard') return null;
+  const p = siteOf(s, JOBS[job].building);
+  return p && { x: p.x - 45, y: p.y - 10 };
 }
 
 /** Site whose pile holds a resource: Wood at the Lumber Yard, Food at the Hunting Lodge, Materials at the Workshop (or the furnace before there is one). */
