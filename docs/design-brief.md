@@ -29,7 +29,7 @@ Meagan is the only leader; the Jans are the only survivors. There are no other n
 | Spreadsheet Jan | Clipboard | +25% Research | Research Hut built |
 | Lost-His-Keys Jan | Patting pockets | Finds random bonus resources on rescue | Tier 2 |
 | Lumberjack Jan | Axe, checked shirt | +25% wood from Chopping | Lumber Yard upgraded |
-| DJ Jan | Headphones | +10% to every job while adjacent | Tier 3 |
+| DJ Jan | Headphones | +5% to every job per DJ in the city, up to 3 (built rule; "while adjacent" needs positions the game doesn't model) | Tier 3 |
 | Veteran Jan | Grey beard, medal | Carries over through prestige, +5% all | First prestige |
 
 Add two or three more variants from real quirks; the collection screen should end up with 10 to 12 Jans in total so there is always one more to find.
@@ -122,6 +122,10 @@ Tiers are just Furnace level bands: Tier 1 is Furnace 1 to 3, Tier 2 is 4 to 6, 
 
 The Research tree is a separate list of 15 to 20 one-off purchases bought with Knowledge: percentage multipliers to each job, cheaper Furnace levels, Jan arrival rate, blizzard resistance. It is the long-tail sink once buildings cap out.
 
+The 16 nodes (any order, each costing 10 × 1.5^(nodes bought) Knowledge; names in `research.json`): Chopping, Hunting, Building and Research +15% each; every job +10%; Meagan walks 20% faster; Meagan carries 10 more; 10% more heat per Wood; Furnace upgrades 10% cheaper; blizzard drain −20%; heat drain −10%; Jans arrive 15% more often; Jans eat 10% less; scavenging 15% sooner; guards +20% damage; caravan Jans wait 50% longer. Research resets at each thaw.
+
+Weapons, Armour and guard kits are crafted at the Barracks straight from the piles (no carrying), from its row on the Build screen.
+
 ## Economy & cost curves
 
 Every repeatable cost follows one formula, so balancing is a matter of tuning a handful of constants in the simulator rather than editing tables.
@@ -210,6 +214,8 @@ At Furnace level 10 the thaw arrives. Meagan can choose to start A New Winter: t
 
 **Warmth Token shop** (permanent, bought between winters):
 
+Each rank costs the listed price; Warm start has one rank and its 50 Wood starts in the furnace as fuel. Tokens are banked when the thaw screen opens, so they can be spent before the new winter starts. Veterans are picked by kind of Jan, up to 3 plus Old friends.
+
 | Bonus | Cost | Effect |
 | --- | --- | --- |
 | Warm start | 3 | Begin with Furnace Lv 2 and 50 Wood |
@@ -229,13 +235,15 @@ The mechanics are generic; the writing is what makes this hers. All of it lives 
 
 **Jan collection bios** (`jans.json`): one or two sentences per variant for the collection screen, written as if cataloguing a species.
 
-**Milestones** (`milestones.json`): 20 to 25 achievements that pop a card with a one-line message. Mix generic progress (first Furnace level) with dated or personal ones. Fields: id, trigger, title, message, optional unlock date (for ones that should only fire on or after a real date).
+**Milestones** (`milestones.json`): 20 to 25 achievements that pop a card with a one-line message. Built triggers: building level, Jans in the city, Jans rescued ever, a variant found, every variant found, blizzards survived, attacks repelled, research nodes learned, and a pure date trigger for the secret one (fires on or after its `unlockDate`; an empty date keeps it off). Mix generic progress (first Furnace level) with dated or personal ones. Fields: id, trigger, title, message, optional unlock date (for ones that should only fire on or after a real date).
 
 **Blizzard warnings and thaw message**: 5 warning lines, 1 thaw cutscene of 3 to 4 lines, 1 message for the first prestige.
 
 **Idle chatter**: 15 to 20 lines that float above random Jans every 20 to 30 seconds while the city is calm. These do the most work for tone.
 
 **Loading tips**: 10 fake survival tips in the style of the genre.
+
+Placeholder drafts of everything below already exist in `src/content/` so the game runs; each item is ticked when the real writing replaces the draft.
 
 - [ ] Write 40 rescue lines
 - [ ] Write 10 to 12 Jan variant bios and pick the final roster
