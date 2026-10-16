@@ -161,6 +161,25 @@ describe('building', () => {
     expect(e.state.buildings.sledShed).toBe(1);
   });
 
+  it('Go from the Build screen puts a building on the nearest free plot and walks her there', () => {
+    const e = new GameEngine({ seed: 1 });
+    e.setMeaganPosition(AWAY);
+    expect(e.nearestFreePlot()).toBe(PLOT);
+    expect(e.goBuild('storehouse')).toBe(true);
+    expect(e.state.sites[PLOT]).toMatchObject({ building: 'storehouse', upgrading: true });
+    run(e, 3);
+    expect(e.state.meagan).toMatchObject(SITES[PLOT].drop);
+    expect(e.goBuild('storehouse')).toBe(false); // already placed
+    expect(e.goBuild('workshop')).toBe(false); // locked at Furnace Lv 1
+  });
+
+  it("can't Go build when every plot is taken", () => {
+    const e = new GameEngine({ seed: 1 });
+    for (const site of e.state.sites) site.building ??= 'kitchen';
+    expect(e.nearestFreePlot()).toBe(-1);
+    expect(e.goBuild('storehouse')).toBe(false);
+  });
+
   it('blocks walking once a plot has a building', () => {
     const e = new GameEngine({ seed: 1 });
     const f = SITES[PLOT].footprint;

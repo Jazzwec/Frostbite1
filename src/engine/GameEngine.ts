@@ -21,7 +21,7 @@ import {
   type Cost,
 } from './economy';
 import { rescueArrival, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
-import { MAP_BOUNDS, MEAGAN_START, SITES, siteIndexOf } from './map';
+import { MAP_BOUNDS, MEAGAN_START, SITES, distance, siteIndexOf } from './map';
 import { rebalanceJobs, updateAutoAssign } from './jobs';
 import { updateMeagan } from './meagan';
 import { buildGrid, findPath, type NavGrid } from './pathfinding';
@@ -220,6 +220,25 @@ export class GameEngine {
   canPlace(key: BuildingKey): boolean {
     const s = this.state;
     return isUnlocked(s, key) && siteIndexOf(s, key) < 0 && s.buildings[key] < BUILDINGS[key].max;
+  }
+
+  /** The empty plot closest to Meagan, or -1 when every plot is taken. */
+  nearestFreePlot(): number {
+    const s = this.state;
+    let best = -1;
+    for (let i = 0; i < SITES.length; i++) {
+      if (s.sites[i].building !== null) continue;
+      if (best < 0 || distance(SITES[i].drop, s.meagan) < distance(SITES[best].drop, s.meagan)) best = i;
+    }
+    return best;
+  }
+
+  /** Build screen's Go for an unplaced building: a construction site on the nearest free plot, and she heads there. */
+  goBuild(key: BuildingKey): boolean {
+    const plot = this.nearestFreePlot();
+    if (plot < 0 || !this.chooseBuilding(plot, key)) return false;
+    this.tapSite(plot);
+    return true;
   }
 
   /** Turn an empty plot into a construction site for a building; Meagan then delivers its cost. */
