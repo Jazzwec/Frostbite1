@@ -1,0 +1,15 @@
+{
+  "name": "Frostbite",
+  "short_name": "Frostbite",
+  "description": "Meagan keeps the furnace burning through an endless winter.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E4ECF2",
+  "theme_color": "#E4ECF2",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
