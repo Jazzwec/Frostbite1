@@ -5,7 +5,7 @@ import { buildingCost, isUnlocked } from '../engine/economy';
 import type { GameEngine } from '../engine/GameEngine';
 import { siteIndexOf } from '../engine/map';
 import type { BuildingKey } from '../engine/types';
-import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
+import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH, TAB_BAR_HEIGHT } from '../theme';
 import { formatCost } from './format';
 
 const PAD = 24;
@@ -43,7 +43,7 @@ export class BuildPicker extends Phaser.GameObjects.Container {
     const keys = (Object.keys(BUILDINGS) as BuildingKey[]).filter((k) => siteIndexOf(s, k) < 0);
     const rows = Math.ceil(keys.length / COLS);
     const panelH = HEADER_H + rows * (BTN_H + GAP) + PAD;
-    const top = GAME_HEIGHT - panelH;
+    const top = GAME_HEIGHT - TAB_BAR_HEIGHT - panelH; // sits above the HTML tab bar
 
     // Tapping the dimmed backdrop closes the sheet (and swallows the tap so she doesn't walk).
     const backdrop = this.scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, COLOURS.ink, 0.35).setOrigin(0);

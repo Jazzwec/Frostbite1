@@ -37,3 +37,6 @@ export const FONT = "'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, -apple-
 /** Logical game size: an iPhone (390×844) at 2× so shapes and text stay crisp on Retina. */
 export const GAME_WIDTH = 780;
 export const GAME_HEIGHT = 1688;
+
+/** Height of the HTML tab bar pinned to the bottom of the canvas, in logical px (64 pt on an iPhone). */
+export const TAB_BAR_HEIGHT = 128;

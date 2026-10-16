@@ -15,7 +15,8 @@ import { MeaganSprite } from '../ui/MeaganSprite';
 import { SiteView } from '../ui/SiteView';
 import { ORIGIN, toScreen, toWorld } from './coords';
 
-const HORIZON = 560;
+/** Where the sky meets the snow: just above the top of the walkable map. */
+const HORIZON = ORIGIN.y - 420;
 const FURNACE_X = ORIGIN.x;
 const FURNACE_Y = ORIGIN.y; // base of the furnace
 

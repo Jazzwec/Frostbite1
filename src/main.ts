@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import './style.css';
+import './ui/overlay/overlay.css';
 import { CityScene } from './scenes/CityScene';
 import { CSS, GAME_HEIGHT, GAME_WIDTH } from './theme';
+import { comingSoon, settingsScreen } from './ui/overlay/SettingsScreen';
+import { Shell } from './ui/overlay/Shell';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: CSS.snow,
@@ -15,4 +18,11 @@ new Phaser.Game({
   },
   render: { antialias: true },
   scene: [CityScene],
+});
+
+new Shell(game, {
+  build: comingSoon('Build'),
+  jans: comingSoon('Jans'),
+  collection: comingSoon('Collection'),
+  settings: settingsScreen,
 });

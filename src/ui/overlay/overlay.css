@@ -1,0 +1,159 @@
+/*
+ * HTML overlays over the Phaser canvas. #ui is sized to the canvas by Shell.ts, which also sets
+ * --u (CSS px per logical game px) and the palette (--ink, --ice, …) from theme.ts.
+ * Sizes are logical px × --u so the overlay scales exactly with the game.
+ */
+#ui {
+  position: fixed;
+  pointer-events: none;
+  font-family: 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+  font-size: calc(var(--u) * 30);
+  --line-w: calc(var(--u) * 5);
+}
+
+#ui button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- City strip ---------- */
+
+.strip {
+  position: absolute;
+  top: calc(var(--u) * 150);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: calc(var(--u) * 8) calc(var(--u) * 22);
+  background: var(--ice);
+  border: var(--line-w) solid var(--line);
+  border-radius: calc(var(--u) * 40);
+  font-size: calc(var(--u) * 26);
+  font-variant-numeric: tabular-nums;
+}
+.strip .blizzard {
+  color: var(--frost);
+  margin-left: calc(var(--u) * 12);
+}
+.strip .blizzard.now {
+  color: var(--ember);
+}
+
+/* ---------- Tab bar ---------- */
+
+.tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  pointer-events: auto;
+  background: var(--ice);
+  border-top: var(--line-w) solid var(--line);
+}
+.tab {
+  flex: 1;
+  min-height: calc(var(--u) * 88);
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 4);
+  font-size: calc(var(--u) * 22);
+  color: var(--slate);
+}
+.tab .icon {
+  font-size: calc(var(--u) * 40);
+  line-height: 1;
+}
+.tab.active {
+  color: var(--ink);
+  background: var(--snow);
+  box-shadow: inset 0 calc(var(--u) * 6) 0 var(--ember);
+}
+
+/* ---------- Screens ---------- */
+
+.screen {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  pointer-events: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  background: var(--ice);
+  padding: calc(var(--u) * 40) calc(var(--u) * 32);
+  box-sizing: border-box;
+}
+.screen h1 {
+  margin: 0 0 calc(var(--u) * 24);
+  font-size: calc(var(--u) * 48);
+}
+.screen h2 {
+  margin: calc(var(--u) * 36) 0 calc(var(--u) * 12);
+  font-size: calc(var(--u) * 34);
+}
+.screen p {
+  margin: 0 0 calc(var(--u) * 16);
+  line-height: 1.35;
+  color: var(--slate);
+}
+
+.btn {
+  min-height: calc(var(--u) * 88);
+  padding: 0 calc(var(--u) * 32);
+  border: var(--line-w) solid var(--ink);
+  border-radius: calc(var(--u) * 22);
+  background: var(--snow);
+  font-size: calc(var(--u) * 30);
+}
+.btn.primary {
+  background: var(--ember);
+  color: var(--ice);
+}
+.btn:disabled {
+  border-color: var(--line);
+  color: var(--slate);
+  background: var(--snow-deep);
+}
+.row-buttons {
+  display: flex;
+  gap: calc(var(--u) * 16);
+  flex-wrap: wrap;
+}
+
+#ui textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: calc(var(--u) * 200);
+  margin-bottom: calc(var(--u) * 16);
+  padding: calc(var(--u) * 16);
+  border: var(--line-w) solid var(--line);
+  border-radius: calc(var(--u) * 16);
+  background: var(--snow);
+  color: var(--ink);
+  /* iOS zooms into inputs under 16px. */
+  font: max(16px, calc(var(--u) * 26)) ui-monospace, Menlo, monospace;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: auto;
+  resize: none;
+}
+
+.note {
+  margin-top: calc(var(--u) * 12);
+  font-size: calc(var(--u) * 26);
+}
+.note.bad {
+  color: var(--ember);
+}
+.note.good {
+  color: var(--frost);
+}

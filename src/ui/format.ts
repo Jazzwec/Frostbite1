@@ -15,6 +15,12 @@ export function formatNumber(n: number): string {
   return i === 0 ? String(v) : `${(Math.floor(v * 10) / 10).toFixed(1).replace(/\.0$/, '')}${SUFFIXES[i]}`;
 }
 
+/** 150 → "2:30". */
+export function formatClock(seconds: number): string {
+  const s = Math.max(0, Math.ceil(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 export const RESOURCE_LABELS: Record<ResourceKey, string> = {
   wood: 'Wood',
   food: 'Food',
