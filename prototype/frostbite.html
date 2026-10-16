@@ -1,0 +1,1593 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Frostbite</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap">
+<style>
+/* Layout: one-column phone game. HUD on top, a window onto the snowy city, scrolling tab body, thumb tab bar at the bottom.
+   One deliberate look: daylight snow and ice, with the furnace's ember as the only warm colour. */
+:root {
+  --snow: #E4ECF2;
+  --snow-deep: #D3DFE8;
+  --ice: #F5F9FB;
+  --line: #C6D4DF;
+  --ink: #1A2938;
+  --slate: #586A7C;
+  --frost: #3A86A6;
+  --ember: #DD5B1A;
+  --ember-deep: #B8460F;
+  --ember-soft: #FCE6D7;
+  --danger: #B93A2B;
+  --warn: #B07A0C;
+  --warn-soft: #FBF0D5;
+  --good: #357F51;
+  --wood: #8A5A34;
+  --food: #B04B33;
+  --mat: #4F6A86;
+  --know: #6550A0;
+  --display: 'Lilita One', 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif;
+  --body: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r: 12px;
+  color-scheme: light;
+}
+html { height: 100%; box-sizing: border-box; background: var(--snow-deep); }
+*, *::before, *::after { box-sizing: inherit; }
+body { height: 100%; background: var(--snow-deep); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.4; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+button { font: inherit; color: inherit; }
+button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--frost); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+#app { height: 100%; max-width: 480px; margin: 0 auto; display: grid; grid-template-rows: auto 1fr auto; background: var(--snow); position: relative; overflow: hidden; }
+.pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* HUD */
+.hud { padding-block: 10px 8px; display: grid; gap: 8px; background: var(--snow); border-bottom: 1px solid var(--line); }
+.hud-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand b { font-family: var(--display); font-weight: 400; font-size: 24px; letter-spacing: 0.01em; color: var(--ink); }
+.brand span { font-size: 12px; color: var(--slate); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--ice); border-radius: 10px; cursor: pointer; }
+.icon-btn svg { width: 20px; height: 20px; fill: none; stroke: var(--slate); stroke-width: 2; }
+
+.heat { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; }
+.heat .ic { color: var(--ember); }
+.heat-bar { height: 14px; border-radius: 8px; background: var(--snow-deep); overflow: hidden; position: relative; box-shadow: inset 0 1px 2px rgba(26,41,56,.12); }
+.heat-fill { position: absolute; inset: 0 auto 0 0; width: 100%; border-radius: 8px; background: linear-gradient(90deg, #E8892F, var(--ember)); transition: width .3s linear, background .3s; }
+.heat-fill.cold { background: linear-gradient(90deg, #8FC2DA, var(--frost)); }
+.heat-line { position: absolute; top: 0; bottom: 0; left: 30%; width: 2px; background: rgba(255,255,255,.7); }
+.heat-txt { grid-column: 2; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--slate); }
+.heat-txt b { color: var(--ink); font-size: 13px; }
+.heat-txt .bad { color: var(--danger); font-weight: 700; }
+
+.chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--ice); border: 1px solid var(--line); border-radius: var(--r); }
+.chip { padding: 6px 4px 5px; display: grid; justify-items: center; gap: 1px; min-width: 0; border-left: 1px solid var(--line); }
+.chip:first-child { border-left: 0; }
+.chip .top { display: flex; align-items: center; gap: 4px; max-width: 100%; }
+.chip .val { font-family: var(--display); font-size: 15px; line-height: 1.1; white-space: nowrap; }
+.chip .sub { font-size: 10.5px; color: var(--slate); white-space: nowrap; }
+.chip .sub.up { color: var(--good); }
+.chip .sub.down { color: var(--danger); }
+.chip .cap { width: 80%; height: 3px; border-radius: 2px; background: var(--snow-deep); overflow: hidden; margin-top: 2px; }
+.chip .cap i { display: block; height: 100%; background: currentColor; opacity: .55; }
+.ic { display: inline-grid; place-items: center; width: 15px; height: 15px; flex: none; }
+.ic svg { width: 100%; height: 100%; fill: currentColor; }
+.c-wood { color: var(--wood); } .c-food { color: var(--food); } .c-materials { color: var(--mat); } .c-knowledge { color: var(--know); } .c-jans { color: var(--ink); }
+
+.forecast { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 7px 10px; border-radius: 10px; background: var(--ice); border: 1px solid var(--line); color: var(--slate); }
+.forecast b { color: var(--ink); }
+.forecast.warn { background: var(--warn-soft); border-color: #E6C98A; color: #6E4E08; }
+.forecast.storm { background: #E3EEF6; border-color: var(--frost); color: #1F5670; animation: pulse 1.6s ease-in-out infinite; }
+.forecast .flake { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; }
+@keyframes pulse { 50% { background: #D2E5F1; } }
+
+/* Body */
+main { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; min-height: 0; }
+.tab { padding-block: 12px 20px; display: grid; gap: 12px; align-content: start; }
+
+.scene-wrap { position: relative; height: clamp(250px, 44vh, 400px); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: #E8F0F5; box-shadow: 0 1px 0 rgba(255,255,255,.8) inset; }
+#scene { width: 100%; height: 100%; display: block; touch-action: manipulation; cursor: pointer; }
+.toast { position: absolute; left: 10px; right: 10px; top: 10px; background: var(--ice); border: 1px solid var(--line); border-left: 4px solid var(--ember); border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 18px rgba(26,41,56,.18); cursor: pointer; animation: drop .35s ease-out; }
+.toast b { font-family: var(--display); font-weight: 400; font-size: 17px; display: block; }
+.toast span { font-size: 13.5px; color: var(--slate); }
+.toast small { display: block; font-size: 11px; color: var(--ember-deep); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 2px; }
+@keyframes drop { from { transform: translateY(-12px); opacity: 0; } }
+.hint { position: absolute; left: 10px; bottom: 10px; font-size: 11.5px; color: var(--slate); background: rgba(245,249,251,.85); padding: 3px 8px; border-radius: 999px; pointer-events: none; }
+
+.card { background: var(--ice); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: grid; gap: 8px; }
+.card h3, .sec-title { margin: 0; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--slate); font-weight: 700; }
+.next { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+.next .name { font-family: var(--display); font-size: 18px; line-height: 1.15; text-wrap: balance; }
+.next .desc { font-size: 13px; color: var(--slate); }
+.costs { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; }
+.cost { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.cost.short { color: var(--danger); }
+.cost.short .ic { opacity: .7; }
+
+.btn { border: 0; border-radius: 10px; padding: 10px 14px; min-height: 44px; min-width: 88px; font-weight: 700; font-size: 14px; background: var(--ember); color: #fff; cursor: pointer; transition: transform .08s, background .15s; white-space: nowrap; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { background: var(--snow-deep); color: var(--slate); cursor: default; font-weight: 400; }
+.btn.ghost { background: var(--ice); color: var(--ink); border: 1px solid var(--line); }
+.btn.quiet { background: transparent; color: var(--slate); min-width: 0; }
+.btn.danger { background: var(--danger); }
+.btn.wide { width: 100%; }
+
+.thaw-card { background: linear-gradient(135deg, var(--ember-soft), #FFF6EE); border-color: #F0BE9C; }
+.thaw-card .name { font-family: var(--display); font-size: 20px; }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.log li { font-size: 13px; color: var(--slate); display: grid; grid-template-columns: 54px 1fr; gap: 8px; }
+.log li time { font-variant-numeric: tabular-nums; color: #8797A6; font-size: 12px; }
+.log li.hot { color: var(--ink); }
+
+/* Lists */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--snow-deep); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: transparent; border-radius: 8px; padding: 8px 6px; font-weight: 700; font-size: 13.5px; color: var(--slate); cursor: pointer; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--ice); color: var(--ink); box-shadow: 0 1px 2px rgba(26,41,56,.15); }
+.list { display: grid; background: var(--ice); border: 1px solid var(--line); border-radius: var(--r); }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; padding: 12px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row-main { min-width: 0; display: grid; gap: 3px; }
+.row-title { font-weight: 700; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.lvl { font-size: 12px; color: var(--slate); font-weight: 400; font-variant-numeric: tabular-nums; }
+.row-desc { font-size: 13px; color: var(--slate); }
+.row.locked { opacity: .55; }
+.row.locked .row-desc { font-style: italic; }
+.note { font-size: 13px; color: var(--slate); }
+.pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--snow-deep); color: var(--slate); letter-spacing: .03em; }
+.pill.ember { background: var(--ember-soft); color: var(--ember-deep); }
+.learned { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.job { grid-template-columns: 1fr auto; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--snow); font-size: 22px; line-height: 1; cursor: pointer; font-weight: 700; color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .count { min-width: 30px; text-align: center; font-family: var(--display); font-size: 20px; font-variant-numeric: tabular-nums; }
+.rate { font-size: 13px; font-weight: 700; }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; }
+.toggle { width: 52px; height: 32px; border-radius: 999px; border: 0; background: var(--snow-deep); position: relative; cursor: pointer; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .15s; }
+.toggle[aria-pressed="true"] { background: var(--ember); }
+.toggle[aria-pressed="true"]::after { left: 23px; }
+.toggle:disabled { opacity: .45; cursor: default; }
+.roster { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.jan-card { background: var(--ice); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; display: grid; gap: 4px; align-content: start; }
+.jan-card canvas { width: 72px; height: 72px; justify-self: center; }
+.jan-card b { font-family: var(--display); font-weight: 400; font-size: 16px; line-height: 1.15; }
+.jan-card .bonus { font-size: 12px; color: var(--ember-deep); font-weight: 700; }
+.jan-card p { margin: 0; font-size: 12.5px; color: var(--slate); }
+.jan-card.unknown b { color: var(--slate); }
+.jan-card .seen { font-size: 11.5px; color: var(--slate); }
+.progress-line { font-size: 13px; color: var(--slate); }
+
+/* Tab bar */
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--ice); padding-block: 4px 6px; }
+.tabs button { border: 0; background: transparent; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; min-height: 52px; font-size: 11.5px; font-weight: 700; color: var(--slate); cursor: pointer; position: relative; }
+.tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tabs button[aria-current="page"] { color: var(--ember); }
+.tabs button[aria-current="page"]::before { content: ""; position: absolute; top: -5px; left: 30%; right: 30%; height: 3px; border-radius: 0 0 3px 3px; background: var(--ember); }
+.badge { position: absolute; top: 4px; left: 55%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--ember); color: #fff; font-size: 11px; line-height: 18px; }
+
+/* Sheets */
+.overlay { position: absolute; inset: 0; background: rgba(26,41,56,.45); display: grid; align-items: end; z-index: 20; animation: fade .2s ease-out; }
+.sheet { background: var(--snow); border-radius: 18px 18px 0 0; max-height: 88%; overflow-y: auto; padding-block: 18px 22px; display: grid; gap: 14px; animation: rise .25s ease-out; }
+.sheet h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; text-wrap: balance; }
+.sheet p { margin: 0; }
+.story { display: grid; gap: 8px; font-size: 16px; }
+.story p:last-child { color: var(--ember-deep); font-weight: 700; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 14px; }
+.kv dt { color: var(--slate); } .kv dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.tip { font-size: 13px; color: var(--slate); border-left: 3px solid var(--frost); padding-left: 10px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.actions .btn { flex: 1; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { transform: translateY(30px); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media (min-width: 520px) { #app { box-shadow: 0 0 0 1px var(--line), 0 10px 40px rgba(26,41,56,.12); } }
+</style>
+
+<div id="app">
+  <header class="hud pad">
+    <div class="hud-top">
+      <div class="brand"><b>Frostbite</b><span id="winterLbl">Winter 1 · Tier 1</span></div>
+      <button class="icon-btn" data-act="settings" aria-label="Settings and test speed"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+    <div class="heat">
+      <span class="ic" id="heatIc"></span>
+      <div class="heat-bar" role="meter" aria-label="Furnace heat" aria-valuemin="0" aria-valuemax="100" id="heatBar"><div class="heat-fill" id="heatFill"></div><div class="heat-line"></div></div>
+      <div class="heat-txt"><span><b id="heatPct" class="num">100%</b> heat</span><span id="heatSub">Burning 0.1 Wood/s</span></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="forecast" id="forecast"></div>
+  </header>
+
+  <main id="main">
+    <section class="tab pad" id="tab-city">
+      <div class="scene-wrap" id="sceneWrap">
+        <canvas id="scene" aria-label="The city. Tap frozen Jans at the bottom edge to rescue them."></canvas>
+        <div class="toast" id="toast" hidden data-act="dismissToast"></div>
+        <div class="hint" id="hint">Tap a frozen Jan to rescue him</div>
+      </div>
+      <div id="cityCards" style="display:grid;gap:12px"></div>
+      <div class="card"><h3>What's been happening</h3><ol class="log" id="log"></ol></div>
+    </section>
+    <section class="tab pad" id="tab-build" hidden></section>
+    <section class="tab pad" id="tab-jans" hidden></section>
+    <section class="tab pad" id="tab-found" hidden></section>
+  </main>
+
+  <nav class="tabs pad" aria-label="Screens">
+    <button data-act="tab" data-arg="city" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-4 2-5 0 2 1 3 2 3 0-3-1-5 1-8z"/></svg>City</button>
+    <button data-act="tab" data-arg="build"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V10l7-6 7 6v11M10 21v-6h4v6"/></svg>Build<span class="badge" id="buildBadge" hidden></span></button>
+    <button data-act="tab" data-arg="jans"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-4 2.7-6.5 6-6.5s6 2.5 6 6.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 13.6c3 .2 5 2.5 5 6"/></svg>Jans<span class="badge" id="jansBadge" hidden></span></button>
+    <button data-act="tab" data-arg="found"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Collection</button>
+  </nav>
+
+  <div class="overlay" id="overlay" hidden><div class="sheet pad" id="sheet" role="dialog" aria-modal="true"></div></div>
+</div>
+
+<script>
+// ===== CONTENT =====
+// Every word the Jans and the game say lives here. These are sample lines: replace them with your own.
+const CONTENT = {
+  intro: [
+    'The winter came early this year.',
+    'Meagan lit the furnace. Out in the snow, someone is shivering.',
+    'It is a Jan. There will be more Jans.',
+  ],
+  rescue: [
+    "Meagan! I knew you'd come. I was only a little bit frozen.",
+    'I walked here from somewhere very cold. I forget where.',
+    'You found me again. You always do.',
+    "I'm here, I'm cold, I'm ready to help.",
+    "I brought nothing, but I'm very good at standing near fires.",
+    "Is there tea? I'll work for tea.",
+    'My feet have strong opinions about this weather.',
+    "You look warm. Let's keep it that way.",
+    "I may be one of many Jans, but I'm your favourite one.",
+    'Ten out of ten rescue. Would freeze again.',
+    'Point me at something that needs doing.',
+    "Thank you. I'll say it again later, probably twice.",
+    'I heard there was a furnace and a very nice boss.',
+    "I can't feel my nose. Is it still there?",
+    'Reporting for duty, Captain Meagan.',
+  ],
+  variantRescue: {
+    chef: ["I can make soup out of snow. It's mostly snow.", "Who's hungry? Don't answer, everyone's hungry."],
+    spreadsheet: ["I've already started a tracker for the trackers.", 'Before we begin, can I see the numbers?'],
+    lumberjack: ['Point me at a tree.', "I've been chopping in my sleep. Literally."],
+    sleepy: ["I'll help. After a short nap. A medium nap.", 'Wake me if anything exciting happens.'],
+    keys: ['Has anyone seen my keys? Oh, I found this instead.', 'Not my keys. Still useful though.'],
+    dj: ['This city needs a soundtrack.', 'One, two. Is this furnace on?'],
+  },
+  returning: ['Sorry. I went for a walk. It was a mistake.', "I'm back! It's very cold out there, for the record."],
+  chatter: [
+    'Is it Friday yet?', 'Someone ate my soup.', "I counted the snowflakes. There's a lot.",
+    "Meagan's doing a great job.", 'I named this log Kevin.', "Five more minutes, then I'll chop.",
+    "I'm not cold, my face just looks like this.", 'Who left the door open?', "Do you think it's warmer in Spain?",
+    'Has anyone seen Jan? ...Which one?', 'Team Meagan, forever.', 'The furnace is my best friend. After Meagan.',
+    "I'd love a hot chocolate.", 'We should get a dog.',
+  ],
+  meagan: ['Everyone stay warm!', 'Nobody gets left in the snow.', 'Who wants soup?', 'Good job, Jans.'],
+  blizzardWarn: ['The wind is picking up.', 'Snow clouds on the horizon.', 'The Jans are pulling their hoods tight.', 'Stock the woodpile. Here it comes.'],
+  thaw: [
+    'The snow is softening.',
+    'The Jans are squinting at the sun like it owes them money.',
+    'Meagan, you kept everyone warm all winter.',
+    'But winter always comes back. Choose who stays by your side.',
+  ],
+  tips: [
+    'Blizzards burn Wood three times faster. Keep a woodpile ready before one hits.',
+    'Idle Jans still eat and still need heat. Give everyone a job.',
+    'No building can outgrow the Furnace. When everything is maxed, save for the next Furnace level.',
+    'The game pauses when you leave. The cold never sneaks up on you.',
+  ],
+  milestones: {
+    first:     { title: 'First Jan saved',        text: 'He says thank you. He will say it again later.' },
+    f2:        { title: 'The furnace grows',      text: 'Bigger fire, more room, more Jans. The cold noticed too.' },
+    chef:      { title: 'Soup is served',         text: 'Chef Jan has arrived. Everything will taste of soup now.' },
+    jans10:    { title: 'Ten Jans',               text: 'That is a lot of Jans. Probably enough. (It is not enough.)' },
+    storm:     { title: 'Weathered the storm',    text: 'Your first blizzard, survived. The Jans want to hug about it.' },
+    tier2:     { title: 'A proper town',          text: 'Tier 2. Lights go up, and stranger Jans come out of the woods.' },
+    research5: { title: 'Big brains',             text: 'Five discoveries. Spreadsheet Jan is unbearable about it.' },
+    jans25:    { title: 'Twenty-five Jans',       text: 'Somewhere, a census taker weeps.' },
+    tier3:     { title: 'City of warmth',         text: 'Tier 3. You can see the furnace from space. Probably.' },
+    thaw:      { title: 'The thaw is coming',     text: 'Furnace level 10. Begin a New Winter whenever you are ready.' },
+    winter2:   { title: 'Another winter',         text: 'The veterans remember everything. Especially the soup.' },
+    allJans:   { title: 'Every Jan accounted for', text: 'The full collection. Meagan has met every Jan there is.' },
+  },
+  bios: {
+    plain: 'The common Jan. Found in parkas, near fires. Says thank you a lot.',
+    chef: 'Rarely seen without a ladle. Believes most problems can be solved with soup.',
+    spreadsheet: 'Tracks everything, including the trackers. Happiest in a hut with a pencil.',
+    lumberjack: 'Speaks fluent tree. Noticeably more productive in a checked shirt.',
+    sleepy: 'Will absolutely help, after a nap. Eats very little, which is its own kind of help.',
+    keys: 'Has lost his keys every winter on record. Finds other things instead.',
+    dj: 'Brings his own soundtrack. Everyone works a little harder when he is around.',
+    veteran: 'Has seen a thaw and came back anyway. Wears the medal to bed.',
+  },
+};
+
+/* ===== ENGINE START ===== */
+// Every tunable number lives in BAL. Tune here, nowhere else.
+const BAL = {
+  heatPerWood: 10,
+  drainBase: 0.5,
+  drainPerJan: 0.1,
+  coldGrowth: 2.1,        // heat drain multiplies by this per Furnace level: the winter deepens as the city grows
+  foodColdExp: 0.5,       // food eaten scales with cold^this
+  foodPerJan: 1 / 60,
+  arrivalBase: 60,
+  maxWaiting: 3,
+  maxWaitingCaravan: 7,
+  coldLine: 0.3, coldMult: 0.5, hungryMult: 0.75,
+  leaveEvery: 60,
+  capPerFurnace: 4, capPerBunk: 2,
+  blizzard: { mult: 3, dur: 120, longDur: 300, warn: 180, longWarn: 600, towerWarn: 60, gapMin: 1200, gapMax: 2400, first: 900 },
+  caravan: { first: 2700, gapMin: 2700, gapMax: 4500 },
+  scavenge: { interval: 90, intervalGrowth: 0.92, bursts: { wood: 40, food: 25, materials: 8 }, growth: 1.2 },
+  research: { base: 10, growth: 1.5 },
+  caps: { wood: 300, woodPerLumber: 50, food: 150, materials: 100, storeGrowth: 1.25, furnaceGrowth: 2.0 },
+  furnace: { wood: 400, materials: 100, growth: 3.0 },
+  gate: true,             // no building may outgrow the Furnace: max level scales with Furnace level
+};
+
+const JOBS = {
+  chop:     { name: 'Chopping',   bld: 'lumber',     res: 'wood',      base: 1.0,  growth: 1.15 },
+  hunt:     { name: 'Hunting',    bld: 'hunting',    res: 'food',      base: 0.6,  growth: 1.15 },
+  build:    { name: 'Building',   bld: 'workshop',   res: 'materials', base: 0.1,  growth: 1.2 },
+  research: { name: 'Research',   bld: 'research',   res: 'knowledge', base: 0.05, growth: 1.2 },
+  scavenge: { name: 'Scavenging', bld: 'expedition', res: null },
+};
+const JOB_ORDER = ['chop', 'hunt', 'build', 'research', 'scavenge'];
+
+const BLD = {
+  furnace:    { name: 'Furnace',         max: 10, unlock: 1, start: 1, desc: 'More heat, +4 Jan cap. The cold deepens.',
+                cost: (n, s) => { const f = BAL.furnace, m = s ? rMult(s, 'furnaceCost') : 1;
+                  return { wood: f.wood * f.growth ** (n - 1) * m, materials: n >= 2 ? f.materials * f.growth ** (n - 1) * m : 0 }; } },
+  lumber:     { name: 'Lumber Yard',     max: 25, unlock: 1, start: 1, job: 'chop', desc: 'Chopping +15%, Wood storage +50', cost: n => ({ wood: 15 * 1.12 ** n }) },
+  hunting:    { name: 'Hunting Lodge',   max: 25, unlock: 1, start: 1, job: 'hunt', desc: 'Hunting +15%', cost: n => ({ wood: 15 * 1.12 ** n }) },
+  workshop:   { name: 'Workshop',        max: 20, unlock: 2, start: 0, job: 'build', desc: 'Building +20%', cost: n => ({ wood: 60 * 1.15 ** n, materials: n > 0 ? 10 * 1.15 ** n : 0 }) },
+  storehouse: { name: 'Storehouse',      max: 15, unlock: 2, start: 0, desc: 'All storage +25%', cost: n => ({ wood: 40 * 1.15 ** n, materials: 5 * 1.15 ** n }) },
+  kitchen:    { name: 'Kitchen',         max: 10, unlock: 2, start: 0, desc: 'Jans eat 5% less', cost: n => ({ wood: 40 * 1.15 ** n, food: 30 * 1.15 ** n }) },
+  research:   { name: 'Research Hut',    max: 20, unlock: 3, start: 0, job: 'research', desc: 'Research +20%', cost: n => ({ wood: 60 * 1.15 ** n, materials: 10 * 1.15 ** n }) },
+  bunkhouse:  { name: 'Bunkhouse',       max: 10, unlock: 3, start: 0, desc: '+2 Jan cap', cost: n => ({ wood: 120 * 1.25 ** n, materials: 30 * 1.25 ** n }) },
+  expedition: { name: 'Expedition Post', max: 10, unlock: 4, start: 0, job: 'scavenge', desc: 'Scavenging: faster, bigger bursts', cost: n => ({ wood: 120 * 1.25 ** n, materials: 30 * 1.25 ** n }) },
+  watchtower: { name: 'Watchtower',      max: 5,  unlock: 4, start: 0, desc: 'Blizzard warning +1 min', cost: n => ({ wood: 120 * 1.25 ** n, materials: 30 * 1.25 ** n }) },
+  springs:    { name: 'Hot Springs',     max: 5,  unlock: 7, start: 0, desc: 'Heat drain −10%', cost: n => ({ wood: 120 * 1.25 ** n, materials: 30 * 1.25 ** n }) },
+};
+const BLD_ORDER = ['furnace', 'lumber', 'hunting', 'workshop', 'storehouse', 'kitchen', 'research', 'bunkhouse', 'expedition', 'watchtower', 'springs'];
+
+const RESEARCH = [
+  { id: 'axes',       name: 'Sharper axes',       desc: 'Chopping +20%',                    job: 'chop', mult: 1.2 },
+  { id: 'snares',     name: 'Snares',             desc: 'Hunting +20%',                     job: 'hunt', mult: 1.2 },
+  { id: 'tools',      name: 'Better tools',       desc: 'Building +20%',                    job: 'build', mult: 1.2 },
+  { id: 'classes',    name: 'Night classes',      desc: 'Research +25%',                    job: 'research', mult: 1.25 },
+  { id: 'parkas',     name: 'Insulated parkas',   desc: 'Heat drain −10%',                  drain: 0.9 },
+  { id: 'grates',     name: 'Better grates',      desc: 'Each Wood gives 20% more heat',    heatPerWood: 1.2 },
+  { id: 'signal',     name: 'Signal fire',        desc: 'Jans arrive 15% sooner',           arrival: 0.85 },
+  { id: 'cellar',     name: 'Root cellar',        desc: 'Jans eat 15% less',                food: 0.85 },
+  { id: 'stacking',   name: 'Log stacking',       desc: 'Wood storage +30%',                woodCap: 1.3 },
+  { id: 'blueprints', name: 'Furnace blueprints', desc: 'Furnace upgrades 15% cheaper',     furnaceCost: 0.85 },
+  { id: 'axes2',      name: 'Axe grinding',       desc: 'Chopping +25%',                    job: 'chop', mult: 1.25, after: 'axes' },
+  { id: 'snares2',    name: 'Big pots',           desc: 'Hunting +25%',                     job: 'hunt', mult: 1.25, after: 'snares' },
+  { id: 'drills',     name: 'Blizzard drills',    desc: 'Blizzards drain ×2.5, not ×3',     blizzard: 2.5 / 3 },
+  { id: 'maps',       name: 'Scouting maps',      desc: 'Scavenging bursts +30%',           scav: 1.3, tier: 2 },
+  { id: 'lanterns',   name: 'Brighter lanterns',  desc: 'Cold slows jobs to 70%, not 50%',  cold: 0.7 },
+  { id: 'shelves',    name: 'Taller shelves',     desc: 'Food and Materials storage +30%',  storeCap: 1.3 },
+  { id: 'morale',     name: 'Campfire songs',     desc: 'All jobs +10%',                    all: 1.1 },
+  { id: 'morale2',    name: 'Group hugs',         desc: 'All jobs +15%',                    all: 1.15, after: 'morale' },
+];
+
+const VARIANTS = {
+  plain:       { name: 'Plain Jan',          bonus: 'No bonus. Still a very good Jan.',      unlock: () => true,                    unlockText: 'Always around', weight: 5 },
+  chef:        { name: 'Chef Jan',           bonus: '+25% Hunting',                          unlock: s => s.bld.kitchen >= 1,       unlockText: 'Build a Kitchen', job: { hunt: 1.25 }, weight: 1 },
+  spreadsheet: { name: 'Spreadsheet Jan',    bonus: '+25% Research',                         unlock: s => s.bld.research >= 1,      unlockText: 'Build a Research Hut', job: { research: 1.25 }, weight: 1 },
+  lumberjack:  { name: 'Lumberjack Jan',     bonus: '+25% Chopping',                         unlock: s => s.bld.lumber >= 5,        unlockText: 'Lumber Yard level 5', job: { chop: 1.25 }, weight: 1 },
+  sleepy:      { name: 'Sleepy Jan',         bonus: 'Works 20% slower, eats 50% less',       unlock: s => s.bld.furnace >= 4,       unlockText: 'Reach Tier 2', work: 0.8, food: 0.5, weight: 1 },
+  keys:        { name: 'Lost-His-Keys Jan',  bonus: 'Finds something useful when rescued',   unlock: s => s.bld.furnace >= 4,       unlockText: 'Reach Tier 2', weight: 1 },
+  dj:          { name: 'DJ Jan',             bonus: '+5% to every job (up to 3 DJs)',        unlock: s => s.bld.furnace >= 7,       unlockText: 'Reach Tier 3', weight: 1 },
+  veteran:     { name: 'Veteran Jan',        bonus: '+5% to every job, survives the thaw',   unlock: () => false,                   unlockText: 'Promote one at the thaw', weight: 0 },
+};
+const VARIANT_ORDER = ['plain', 'chef', 'spreadsheet', 'lumberjack', 'sleepy', 'keys', 'dj', 'veteran'];
+
+const SHOP = {
+  warm:    { name: 'Warm start',   desc: 'Begin with Furnace Lv 2 and 50 extra Wood', cost: 3, max: 1 },
+  walls:   { name: 'Thick walls',  desc: 'Heat drain −5% per rank',                   cost: 4, max: 5 },
+  feet:    { name: 'Fast feet',    desc: 'Jans arrive 10% sooner per rank',           cost: 4, max: 5 },
+  pockets: { name: 'Deep pockets', desc: 'All storage +25% per rank',                 cost: 5, max: 3 },
+  friends: { name: 'Old friends',  desc: '+1 Veteran slot per rank',                  cost: 6, max: 2 },
+  head:    { name: 'Head start',   desc: 'All jobs +10% per rank',                    cost: 8, max: 5 },
+};
+
+const MILESTONES = [
+  { id: 'first',     check: s => s.stats.rescued >= 1 },
+  { id: 'f2',        check: s => s.bld.furnace >= 2 },
+  { id: 'chef',      check: s => s.found.chef > 0 },
+  { id: 'jans10',    check: s => s.jans.length >= 10 },
+  { id: 'storm',     check: s => s.stats.blizzards >= 1 },
+  { id: 'tier2',     check: s => s.bld.furnace >= 4 },
+  { id: 'research5', check: s => s.researchBought >= 5 },
+  { id: 'jans25',    check: s => s.jans.length >= 25 },
+  { id: 'tier3',     check: s => s.bld.furnace >= 7 },
+  { id: 'thaw',      check: s => s.bld.furnace >= 10 },
+  { id: 'winter2',   check: s => s.winter >= 2 },
+  { id: 'allJans',   check: s => VARIANT_ORDER.every(v => s.found[v] > 0) },
+];
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd = (a, b) => a + Math.random() * (b - a);
+const tierOf = F => (F >= 7 ? 3 : F >= 4 ? 2 : 1);
+
+function rMult(s, key, job) {
+  let m = 1;
+  for (const r of RESEARCH) if (s.research[r.id] && r[key] != null && (!job || r.job === job)) m *= r[key];
+  return m;
+}
+
+function newState() {
+  const s = {
+    v: 1, winter: 1, totalT: 0, tokens: 0, nextId: 1,
+    shop: { warm: 0, walls: 0, feet: 0, pockets: 0, friends: 0, head: 0 },
+    found: Object.fromEntries(VARIANT_ORDER.map(v => [v, 0])),
+    milestones: {},
+    stats: { rescued: 0, blizzards: 0, winters: 0 },
+  };
+  newWinter(s, []);
+  return s;
+}
+
+function newWinter(s, vets) {
+  const warm = s.shop.warm > 0;
+  s.t = 0; s.heat = warm ? 200 : 100; s.lastBurn = 0;
+  s.res = { wood: 40 + (warm ? 50 : 0), food: 40, materials: 0, knowledge: 0 };
+  s.bld = Object.fromEntries(BLD_ORDER.map(k => [k, BLD[k].start]));
+  if (warm) s.bld.furnace = 2;
+  s.jans = [];
+  for (const job of ['chop', 'chop', 'hunt']) { s.jans.push({ id: s.nextId++, v: 'plain', job, vet: false }); s.found.plain++; }
+  for (const v of vets) s.jans.push({ id: s.nextId++, v: v.v, job: 'chop', vet: true });
+  s.waiting = []; s.lost = [];
+  s.arrivalT = 40; s.scavT = 0; s.leaveT = 0;
+  s.bz = { next: BAL.blizzard.first, active: false, end: 0, long: false, warned: false };
+  s.longDoneTier = 1;
+  s.caravanNext = BAL.caravan.first;
+  s.research = {}; s.researchBought = 0;
+  s.autoAssign = false;
+}
+
+// ---- derived values ----
+const janCap = s => BAL.capPerFurnace * s.bld.furnace + BAL.capPerBunk * s.bld.bunkhouse;
+const heatCap = s => 100 * s.bld.furnace;
+const cold = s => BAL.coldGrowth ** (s.bld.furnace - 1);
+const heatPerWood = s => BAL.heatPerWood * rMult(s, 'heatPerWood');
+function drain(s, blizzardOverride) {
+  const bz = blizzardOverride == null ? s.bz.active : blizzardOverride;
+  return (BAL.drainBase + BAL.drainPerJan * s.jans.length) * cold(s) * rMult(s, 'drain')
+    * 0.9 ** s.bld.springs * 0.95 ** s.shop.walls * (bz ? BAL.blizzard.mult * rMult(s, 'blizzard') : 1);
+}
+const woodBurnRate = (s, bz) => drain(s, bz) / heatPerWood(s);
+function foodUse(s) {
+  let n = 0;
+  for (const j of s.jans) n += VARIANTS[j.v].food || 1;
+  return n * BAL.foodPerJan * cold(s) ** BAL.foodColdExp * 0.95 ** s.bld.kitchen * rMult(s, 'food');
+}
+function storeMult(s) { return BAL.caps.storeGrowth ** s.bld.storehouse * BAL.caps.furnaceGrowth ** (s.bld.furnace - 1) * (1 + 0.25 * s.shop.pockets); }
+function caps(s) {
+  const m = storeMult(s), c = BAL.caps;
+  return {
+    wood: (c.wood + c.woodPerLumber * s.bld.lumber) * m * rMult(s, 'woodCap'),
+    food: c.food * m * rMult(s, 'storeCap'),
+    materials: c.materials * m * rMult(s, 'storeCap'),
+    knowledge: Infinity,
+  };
+}
+function condMult(s) {
+  let m = 1;
+  if (s.heat / heatCap(s) < BAL.coldLine) m *= hasR(s, 'lanterns') ? 0.7 : BAL.coldMult;
+  if (s.res.food <= 0) m *= BAL.hungryMult;
+  return m;
+}
+const hasR = (s, id) => !!s.research[id];
+function globalMult(s) {
+  let vets = 0, djs = 0;
+  for (const j of s.jans) { if (j.vet) vets++; if (j.v === 'dj') djs++; }
+  return (1 + 0.05 * vets) * (1 + 0.05 * Math.min(3, djs)) * rMult(s, 'all') * (1 + 0.1 * s.shop.head) * condMult(s);
+}
+function janJobMult(j, job) {
+  const V = VARIANTS[j.v];
+  return ((V.job && V.job[job]) || 1) * (V.work || 1);
+}
+function perJanBase(s, job) {
+  const J = JOBS[job], lvl = s.bld[J.bld];
+  if (!lvl) return 0;
+  return J.base * J.growth ** (lvl - 1) * rMult(s, 'mult', job);
+}
+function jobCount(s) {
+  const c = { idle: 0, chop: 0, hunt: 0, build: 0, research: 0, scavenge: 0 };
+  for (const j of s.jans) c[j.job]++;
+  return c;
+}
+function jobRate(s, job, gm) {
+  const base = perJanBase(s, job);
+  if (!base) return 0;
+  let sum = 0;
+  for (const j of s.jans) if (j.job === job) sum += janJobMult(j, job);
+  return base * sum * (gm == null ? globalMult(s) : gm);
+}
+const scavInterval = s => BAL.scavenge.interval * BAL.scavenge.intervalGrowth ** Math.max(0, s.bld.expedition - 1);
+function scavBurst(s, res) {
+  return BAL.scavenge.bursts[res] * BAL.scavenge.growth ** Math.max(0, s.bld.expedition - 1) * rMult(s, 'scav') * cold(s) ** 0.5;
+}
+// Net per-second rates for display and for auto-assign.
+function rates(s) {
+  const gm = globalMult(s);
+  const r = { wood: jobRate(s, 'chop', gm), food: jobRate(s, 'hunt', gm), materials: jobRate(s, 'build', gm), knowledge: jobRate(s, 'research', gm) };
+  const burn = s.res.wood > 0 || r.wood > 0 ? woodBurnRate(s) : 0;
+  return { gross: { ...r }, burn, eat: foodUse(s), wood: r.wood - burn, food: r.food - foodUse(s), materials: r.materials, knowledge: r.knowledge };
+}
+function arrivalInterval(s) {
+  const fill = s.jans.length / janCap(s);
+  return BAL.arrivalBase * 0.9 ** s.shop.feet * rMult(s, 'arrival') * (1 + 2 * fill * fill);
+}
+const warnTime = s => (s.bz.long ? BAL.blizzard.longWarn : BAL.blizzard.warn) + BAL.blizzard.towerWarn * s.bld.watchtower;
+
+// ---- costs and purchases ----
+function costOf(s, key) {
+  const raw = BLD[key].cost(s.bld[key], s), out = {};
+  for (const k in raw) if (raw[k] > 0) out[k] = Math.ceil(raw[k]);
+  return out;
+}
+const canAfford = (s, c) => Object.keys(c).every(k => s.res[k] >= c[k]);
+function fitsStorage(s, c) { const cp = caps(s); return Object.keys(c).every(k => c[k] <= cp[k]); }
+const isUnlocked = (s, key) => s.bld.furnace >= BLD[key].unlock;
+function maxLevel(s, key) {
+  const M = BLD[key].max;
+  if (key === 'furnace' || !BAL.gate) return M;
+  return Math.max(1, Math.ceil(M * s.bld.furnace / 10));
+}
+const isMaxed = (s, key) => s.bld[key] >= maxLevel(s, key);
+function pay(s, c) { for (const k in c) s.res[k] -= c[k]; }
+function buy(s, key) {
+  if (!isUnlocked(s, key) || isMaxed(s, key)) return false;
+  const c = costOf(s, key);
+  if (!canAfford(s, c)) return false;
+  pay(s, c); s.bld[key]++;
+  if (key === 'furnace') s.heat = Math.min(s.heat + 100, heatCap(s));
+  return true;
+}
+const researchCost = s => Math.ceil(BAL.research.base * BAL.research.growth ** s.researchBought);
+function researchAvailable(s, r) {
+  if (s.research[r.id]) return false;
+  if (r.after && !s.research[r.after]) return false;
+  if (r.tier && tierOf(s.bld.furnace) < r.tier) return false;
+  return true;
+}
+function buyResearch(s, id) {
+  const r = RESEARCH.find(x => x.id === id), c = researchCost(s);
+  if (!r || !researchAvailable(s, r) || s.res.knowledge < c) return false;
+  s.res.knowledge -= c; s.research[id] = true; s.researchBought++;
+  return true;
+}
+function shopCost(key) { return SHOP[key].cost; }
+function buyShop(s, key) {
+  if (s.shop[key] >= SHOP[key].max || s.tokens < shopCost(key)) return false;
+  s.tokens -= shopCost(key); s.shop[key]++;
+  return true;
+}
+
+// ---- Jans ----
+function pickVariant(s, rareOnly) {
+  const pool = VARIANT_ORDER.filter(v => VARIANTS[v].weight > 0 && VARIANTS[v].unlock(s) && (!rareOnly || v !== 'plain'));
+  if (!pool.length) return 'plain';
+  const total = pool.reduce((a, v) => a + VARIANTS[v].weight, 0);
+  let x = Math.random() * total;
+  for (const v of pool) { x -= VARIANTS[v].weight; if (x <= 0) return v; }
+  return pool[pool.length - 1];
+}
+function freeSlot(s) {
+  const used = new Set(s.waiting.map(w => w.slot));
+  for (let i = 0; i < BAL.maxWaitingCaravan; i++) if (!used.has(i)) return i;
+  return 0;
+}
+function addArrival(s, v, returning) {
+  s.waiting.push({ id: s.nextId++, v: v || null, slot: freeSlot(s), returning: !!returning });
+}
+function rescue(s, wid) {
+  const i = s.waiting.findIndex(w => w.id === wid);
+  if (i < 0) return { ok: false, reason: 'gone' };
+  if (s.jans.length >= janCap(s)) return { ok: false, reason: 'cap' };
+  const w = s.waiting.splice(i, 1)[0];
+  const v = w.v || pickVariant(s);
+  const jan = { id: w.id, v, job: 'idle', vet: false };
+  s.jans.push(jan);
+  if (!w.returning) { s.found[v]++; s.stats.rescued++; }
+  let bonus = null;
+  if (v === 'keys' && !w.returning) {
+    const res = ['wood', 'food', 'materials'][Math.floor(Math.random() * 3)];
+    const rt = rates(s).gross[res];
+    const amt = Math.max(res === 'materials' ? 5 : 20, rt * 45);
+    s.res[res] = Math.min(caps(s)[res], s.res[res] + amt);
+    bonus = { res, amt };
+  }
+  if (s.autoAssign) { const job = neededJob(s); if (job) jan.job = job; }
+  return { ok: true, jan, bonus, returning: w.returning };
+}
+function jobAvailable(s, job) { return s.bld[JOBS[job].bld] > 0; }
+function assign(s, job, delta) {
+  if (delta > 0) {
+    if (!jobAvailable(s, job)) return false;
+    const idle = s.jans.filter(j => j.job === 'idle');
+    if (!idle.length) return false;
+    idle.sort((a, b) => janJobMult(b, job) - janJobMult(a, job));
+    idle[0].job = job;
+  } else {
+    const inJob = s.jans.filter(j => j.job === job);
+    if (!inJob.length) return false;
+    inJob.sort((a, b) => janJobMult(a, job) - janJobMult(b, job));
+    inJob[0].job = 'idle';
+  }
+  return true;
+}
+const SHARE = { chop: 0.42, hunt: 0.13, build: 0.25, research: 0.12, scavenge: 0.08 };
+function neededJob(s) {
+  const avail = JOB_ORDER.filter(j => jobAvailable(s, j));
+  const r = rates(s);
+  if (r.food < 0.02) return 'hunt';
+  if (r.gross.wood < woodBurnRate(s, true) * 0.7) return 'chop';
+  const c = jobCount(s), n = s.jans.length;
+  let best = 'chop', gap = -Infinity;
+  const tot = avail.reduce((a, j) => a + SHARE[j], 0);
+  for (const j of avail) { const g = (SHARE[j] / tot) * n - c[j]; if (g > gap) { gap = g; best = j; } }
+  return best;
+}
+function autoAssignAll(s) {
+  for (const j of s.jans) if (j.job === 'idle') j.job = neededJob(s);
+}
+
+// ---- prestige ----
+const canPrestige = s => s.bld.furnace >= 10;
+const tokensEarned = s => s.bld.furnace + Math.floor(s.jans.length / 10);
+const vetSlots = s => 3 + s.shop.friends;
+function doPrestige(s, vetIds) {
+  const vets = s.jans.filter(j => vetIds.includes(j.id)).slice(0, vetSlots(s));
+  s.tokens += tokensEarned(s);
+  s.found.veteran += vets.filter(v => !v.vet).length;
+  s.winter++; s.stats.winters++;
+  newWinter(s, vets);
+}
+
+// ---- the tick ----
+function scheduleBlizzard(s) {
+  const tier = tierOf(s.bld.furnace);
+  s.bz.long = tier > s.longDoneTier;
+  if (s.bz.long) s.longDoneTier = tier;
+  s.bz.next = s.t + rnd(BAL.blizzard.gapMin, BAL.blizzard.gapMax);
+  s.bz.warned = false;
+}
+function tick(s, dt, ev) {
+  const prevSec = Math.floor(s.t);
+  s.t += dt; s.totalT += dt;
+  const bz = s.bz;
+  if (bz.active) {
+    if (s.t >= bz.end) { bz.active = false; s.stats.blizzards++; ev.push({ type: 'blizzardEnd', long: bz.long }); scheduleBlizzard(s); }
+  } else if (s.t >= bz.next) {
+    bz.active = true; bz.warned = true; bz.end = s.t + (bz.long ? BAL.blizzard.longDur : BAL.blizzard.dur);
+    ev.push({ type: 'blizzardStart', long: bz.long });
+  } else if (!bz.warned && s.t >= bz.next - warnTime(s)) {
+    bz.warned = true; ev.push({ type: 'blizzardWarn', long: bz.long });
+  }
+
+  // heat: the furnace burns whatever wood it needs to stay full
+  const d = drain(s) * dt, hpw = heatPerWood(s), hc = heatCap(s);
+  const burn = Math.min(s.res.wood, Math.max(0, hc - s.heat + d) / hpw);
+  s.res.wood -= burn; s.lastBurn = burn / dt;
+  s.heat = clamp(s.heat + burn * hpw - d, 0, hc);
+
+  // production and food
+  const gm = globalMult(s), cp = caps(s);
+  s.res.wood += jobRate(s, 'chop', gm) * dt;
+  s.res.food += (jobRate(s, 'hunt', gm) - foodUse(s)) * dt;
+  s.res.materials += jobRate(s, 'build', gm) * dt;
+  s.res.knowledge += jobRate(s, 'research', gm) * dt;
+  for (const k of ['wood', 'food', 'materials']) s.res[k] = clamp(s.res[k], 0, cp[k]);
+
+  // scavenging
+  const scav = s.jans.reduce((a, j) => a + (j.job === 'scavenge' ? janJobMult(j, 'scavenge') : 0), 0);
+  if (scav && s.bld.expedition) {
+    s.scavT += dt * scav * gm / scavInterval(s);
+    while (s.scavT >= 1) {
+      s.scavT -= 1;
+      const res = ['wood', 'wood', 'food', 'materials'][Math.floor(Math.random() * 4)];
+      const amt = scavBurst(s, res);
+      s.res[res] = Math.min(cp[res], s.res[res] + amt);
+      ev.push({ type: 'burst', res, amt });
+    }
+  }
+
+  // arrivals and caravans pause during blizzards
+  if (!bz.active) {
+    s.arrivalT += dt;
+    if (s.arrivalT >= arrivalInterval(s)) {
+      s.arrivalT = 0;
+      if (s.waiting.length < BAL.maxWaiting) { addArrival(s); ev.push({ type: 'arrival' }); }
+    }
+    if (s.t >= s.caravanNext) {
+      s.caravanNext = s.t + rnd(BAL.caravan.gapMin, BAL.caravan.gapMax);
+      const n = 3 + Math.floor(Math.random() * 3);
+      let added = 0;
+      for (const l of s.lost.splice(0)) { if (s.waiting.length < BAL.maxWaitingCaravan) { addArrival(s, l.v, true); added++; } }
+      for (let i = 0; i < n && s.waiting.length < BAL.maxWaitingCaravan; i++) { addArrival(s, i === 0 ? pickVariant(s, true) : null); added++; }
+      ev.push({ type: 'caravan', n: added });
+    }
+  }
+
+  // heat at zero: a Jan wanders off every minute
+  if (s.heat <= 0.001 && s.jans.some(j => !j.vet)) {
+    s.leaveT += dt;
+    if (s.leaveT >= BAL.leaveEvery) {
+      s.leaveT = 0;
+      const pool = s.jans.filter(j => !j.vet);
+      const j = pool[Math.floor(Math.random() * pool.length)];
+      s.jans.splice(s.jans.indexOf(j), 1);
+      s.lost.push({ v: j.v });
+      ev.push({ type: 'janLeft', jan: j });
+    }
+  } else s.leaveT = 0;
+
+  if (Math.floor(s.t) !== prevSec) {
+    for (const m of MILESTONES) if (!s.milestones[m.id] && m.check(s)) { s.milestones[m.id] = true; ev.push({ type: 'milestone', id: m.id }); }
+  }
+}
+/* ===== ENGINE END ===== */
+
+
+// ===== APP =====
+const SAVE_KEY = 'frostbite-save-v1';
+const $ = id => document.getElementById(id);
+const RES = ['wood', 'food', 'materials', 'knowledge'];
+const RES_NAME = { wood: 'Wood', food: 'Food', materials: 'Materials', knowledge: 'Knowledge' };
+const ICON = {
+  jans: '<svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4.2"/><path d="M3.5 22c0-5.5 3.8-9 8.5-9s8.5 3.5 8.5 9z"/></svg>',
+  wood: '<svg viewBox="0 0 24 24"><rect x="2" y="7.5" width="16" height="10" rx="1.5"/><ellipse cx="18.5" cy="12.5" rx="3.5" ry="5"/></svg>',
+  food: '<svg viewBox="0 0 24 24"><path d="M2 12c3.2-5.4 9.5-6.6 14.5-2.4L22 5.5v13l-5.5-4.1C11.5 18.6 5.2 17.4 2 12z"/></svg>',
+  materials: '<svg viewBox="0 0 24 24"><rect x="2" y="14" width="20" height="7" rx="1.5"/><rect x="5" y="5" width="14" height="7.5" rx="1.5"/></svg>',
+  knowledge: '<svg viewBox="0 0 24 24"><path d="M2 4.5c3.6-1.2 7-1 10 1.2V21c-3-2-6.4-2.3-10-1.2zM22 4.5c-3.6-1.2-7-1-10 1.2V21c3-2 6.4-2.3 10-1.2z"/></svg>',
+  heat: '<svg viewBox="0 0 24 24"><path d="M12 1.5c1 4.5 7 6.5 7 13a7 7 0 0 1-14 0c0-3.4 2-5.6 3.3-6.6 0 2.4 1.1 3.6 2.4 3.6 0-3.6-1.4-6.6 1.3-10z"/></svg>',
+};
+const FLAKE = '<svg class="flake" viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2"/></svg>';
+const ic = k => `<span class="ic c-${k}">${ICON[k]}</span>`;
+
+function fmt(n) {
+  if (!isFinite(n)) return '∞';
+  const a = Math.abs(n), sign = n < 0 ? '−' : '';
+  if (a < 1000) return sign + Math.floor(a);
+  const u = ['K', 'M', 'B', 'T', 'Qa', 'Qi'];
+  let v = a, i = -1;
+  while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
+  return sign + (v < 10 ? v.toFixed(2) : v < 100 ? v.toFixed(1) : Math.floor(v)) + u[i];
+}
+function fmtRate(n) {
+  const a = Math.abs(n), sign = n < 0 ? '−' : '+';
+  if (a < 0.005) return '0';
+  if (a < 1) return sign + a.toFixed(2);
+  if (a < 10) return sign + a.toFixed(1);
+  return sign + fmt(a);
+}
+function fmtDur(t) {
+  if (!isFinite(t)) return '—';
+  t = Math.max(0, Math.ceil(t));
+  if (t < 60) return t + 's';
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s).padStart(2, '0')}`;
+}
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---- state ----
+let S;
+const ui = { tab: 'city', seg: 'buildings', speed: 1, manualPause: false, sheet: null, log: [], logVer: 0, toastQ: [], toastUntil: 0, sigs: {}, vetPick: {}, prestigeStep: 0, confirmReset: false, saveT: 0, uiT: 0 };
+
+function repair(d) {
+  const base = newState();
+  for (const k in base) if (d[k] === undefined) d[k] = base[k];
+  for (const k in base.shop) if (d.shop[k] === undefined) d.shop[k] = 0;
+  for (const v of VARIANT_ORDER) if (d.found[v] === undefined) d.found[v] = 0;
+  for (const k of BLD_ORDER) if (d.bld[k] === undefined) d.bld[k] = BLD[k].start;
+  for (const k in base.stats) if (d.stats[k] === undefined) d.stats[k] = 0;
+  return d;
+}
+function load() {
+  try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const d = JSON.parse(raw); if (d && d.v === 1 && d.bld && d.res) return repair(d); } catch (e) {}
+  return null;
+}
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+
+function addLog(text, hot) {
+  ui.log.unshift({ t: S.t, text, hot: !!hot });
+  ui.log.length = Math.min(ui.log.length, 8);
+  ui.logVer++;
+}
+function queueToast(kicker, title, text) { ui.toastQ.push({ kicker, title, text }); }
+
+// ---- events from the engine ----
+function handleEvents(ev) {
+  for (const e of ev) {
+    if (e.type === 'blizzardWarn') addLog(`${pick(CONTENT.blizzardWarn)} ${e.long ? 'A Long Night' : 'A blizzard'} is coming.`, true);
+    else if (e.type === 'blizzardStart') { addLog(e.long ? 'The Long Night has begun. Heat drain ×3 for 5 minutes.' : 'Blizzard! Heat drain ×3 for 2 minutes.', true); buzz(30); }
+    else if (e.type === 'blizzardEnd') addLog(e.long ? 'The Long Night is over. Everyone made it.' : 'The blizzard has passed.');
+    else if (e.type === 'caravan') { addLog(`A caravan of ${e.n} Jans is waiting at the edge of town.`, true); buzz(20); }
+    else if (e.type === 'janLeft') { addLog(`${VARIANTS[e.jan.v].name} wandered off into the snow. He will come back with the next caravan.`, true); scene.lostFx(); }
+    else if (e.type === 'burst') scene.float('scavenge', `+${fmt(e.amt)} ${RES_NAME[e.res]}`, e.res);
+    else if (e.type === 'milestone') { const m = CONTENT.milestones[e.id]; if (m) queueToast('Milestone', m.title, m.text); }
+  }
+}
+function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+
+// ---- actions ----
+function doRescue(wid) {
+  const w = S.waiting.find(x => x.id === wid);
+  if (!w) return;
+  const res = rescue(S, wid);
+  if (!res.ok) {
+    if (res.reason === 'cap') scene.say({ slot: w.slot }, `No warm bed for me. ${S.bld.furnace >= 3 ? 'Build a Bunkhouse or upgrade' : 'Upgrade'} the Furnace.`);
+    return;
+  }
+  const j = res.jan, V = VARIANTS[j.v];
+  const lines = res.returning ? CONTENT.returning : (CONTENT.variantRescue[j.v] && Math.random() < 0.7 ? CONTENT.variantRescue[j.v] : CONTENT.rescue);
+  scene.rescued(j, w.slot, pick(lines));
+  if (res.bonus) scene.float({ id: j.id }, `+${fmt(res.bonus.amt)} ${RES_NAME[res.bonus.res]}`, res.bonus.res);
+  addLog(res.returning ? `${V.name} came back.` : `${V.name} rescued.${S.found[j.v] === 1 && j.v !== 'plain' ? ' A new kind of Jan!' : ''}`, j.v !== 'plain');
+  buzz(12);
+  dirty();
+}
+const ACT = {
+  tab(t) { setTab(t); },
+  seg(s) { ui.seg = s; dirty(); },
+  buy(k) { if (buy(S, k)) { buzz(10); addLog(`${BLD[k].name} upgraded to level ${S.bld[k]}.`, k === 'furnace'); if (k === 'furnace') scene.furnaceFx(); save(); dirty(); } },
+  research(id) { if (buyResearch(S, id)) { buzz(10); addLog(`Learned: ${RESEARCH.find(r => r.id === id).name}.`); save(); dirty(); } },
+  shop(k) { if (buyShop(S, k)) { buzz(10); save(); dirty(); } },
+  add(job) { if (assign(S, job, 1)) dirty(); },
+  sub(job) { if (assign(S, job, -1)) dirty(); },
+  fill(job) { while (assign(S, job, 1)); dirty(); },
+  auto() { if (S.bld.furnace < 4) return; S.autoAssign = !S.autoAssign; if (S.autoAssign) autoAssignAll(S); dirty(); },
+  nextAct(arg) { const [kind, key] = arg.split(':'); if (kind === 'bld') ACT.buy(key); else ACT.research(key); },
+  dismissToast() { ui.toastUntil = 0; },
+  settings() { ui.confirmReset = false; openSheet('settings'); },
+  closeSheet() { closeSheet(); },
+  speed(v) { ui.speed = +v; renderSheet(); },
+  pause() { ui.manualPause = !ui.manualPause; renderSheet(); },
+  cheat() { const c = caps(S); for (const k of ['wood', 'food', 'materials']) S.res[k] = c[k]; S.res.knowledge += 1000; addLog('Testing: storage filled.'); dirty(); renderSheet(); },
+  skipStorm() { if (!S.bz.active) { S.bz.next = S.t + 5; S.bz.warned = false; } closeSheet(); },
+  reset() { ui.confirmReset = true; renderSheet(); },
+  resetYes() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} S = newState(); ui.log = []; ui.logVer++; scene.reset(); ui.confirmReset = false; openSheet('intro'); dirty(); },
+  resetNo() { ui.confirmReset = false; renderSheet(); },
+  thaw() { ui.prestigeStep = 0; ui.vetPick = {}; openSheet('prestige'); },
+  pNext() { ui.prestigeStep++; renderSheet(); },
+  vetAdd(v) { const used = Object.values(ui.vetPick).reduce((a, b) => a + b, 0); const have = S.jans.filter(j => j.v === v).length; if (used < vetSlots(S) && (ui.vetPick[v] || 0) < have) { ui.vetPick[v] = (ui.vetPick[v] || 0) + 1; renderSheet(); } },
+  vetSub(v) { if (ui.vetPick[v]) { ui.vetPick[v]--; renderSheet(); } },
+  pDo() {
+    const ids = [];
+    for (const v in ui.vetPick) S.jans.filter(j => j.v === v).sort((a, b) => b.vet - a.vet).slice(0, ui.vetPick[v]).forEach(j => ids.push(j.id));
+    const earned = tokensEarned(S);
+    doPrestige(S, ids);
+    scene.reset(); ui.log = []; addLog(`Winter ${S.winter} begins. ${earned} Warmth Tokens earned.`, true);
+    ui.seg = 'warmth'; closeSheet(); setTab('build'); save(); dirty();
+  },
+  start() { closeSheet(); },
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  const f = ACT[b.dataset.act];
+  if (f) f(b.dataset.arg);
+});
+
+function setTab(t) {
+  ui.tab = t;
+  for (const id of ['city', 'build', 'jans', 'found']) $('tab-' + id).hidden = id !== t;
+  document.querySelectorAll('.tabs button').forEach(b => { if (b.dataset.arg === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  $('main').scrollTop = 0;
+  dirty();
+  if (t === 'city') requestAnimationFrame(() => scene.resize());
+}
+function dirty() { ui.sigs = {}; }
+
+// ---- shared helpers for buttons ----
+function timeToAfford(cost, r) {
+  let t = 0;
+  const cp = caps(S);
+  for (const k in cost) {
+    if (cost[k] > cp[k]) return Infinity;
+    const short = cost[k] - S.res[k];
+    if (short <= 0) continue;
+    const rate = k === 'knowledge' ? r.knowledge : r[k];
+    if (rate <= 0) return Infinity;
+    t = Math.max(t, short / rate);
+  }
+  return t;
+}
+function costHTML(cost) {
+  return `<span class="costs">${Object.keys(cost).map(k => `<span class="cost num" data-need="${k}" data-amt="${cost[k]}">${ic(k)}${fmt(cost[k])}</span>`).join('')}</span>`;
+}
+function buyBtn(act, arg, cost, label) {
+  return `<button class="btn" data-act="${act}" data-arg="${arg}" data-cost='${JSON.stringify(cost)}' data-label="${label}">${label}</button>`;
+}
+// Updates every cost chip and buy button on screen without re-rendering (so taps never land on a replaced button).
+function refreshButtons(root, r) {
+  root.querySelectorAll('[data-need]').forEach(el => el.classList.toggle('short', S.res[el.dataset.need] < +el.dataset.amt));
+  const cp = caps(S);
+  root.querySelectorAll('button[data-cost]').forEach(b => {
+    const c = JSON.parse(b.dataset.cost);
+    const ok = canAfford(S, c);
+    const tooBig = Object.keys(c).some(k => c[k] > cp[k]);
+    let label = b.dataset.label;
+    if (!ok) label = tooBig ? 'Need storage' : (() => { const t = timeToAfford(c, r); return isFinite(t) ? 'in ' + fmtDur(t) : 'Not yet'; })();
+    if (b.disabled === ok) b.disabled = !ok;
+    if (b.textContent !== label) b.textContent = label;
+  });
+}
+
+// ---- HUD ----
+function renderChips() {
+  $('chips').innerHTML = ['jans', ...RES].map(k => `<div class="chip c-${k}" id="chip-${k}" title="${k === 'jans' ? 'Jans' : RES_NAME[k]}"><div class="top">${ic(k)}<span class="val num" style="color:var(--ink)"></span></div><div class="sub num"></div>${k === 'jans' || k === 'knowledge' ? '' : '<div class="cap"><i></i></div>'}</div>`).join('');
+  $('heatIc').innerHTML = ICON.heat;
+}
+function updateHUD(r) {
+  const hc = heatCap(S), f = S.heat / hc;
+  $('heatFill').style.width = (f * 100).toFixed(1) + '%';
+  $('heatFill').classList.toggle('cold', f < BAL.coldLine);
+  $('heatPct').textContent = Math.round(f * 100) + '%';
+  $('heatBar').setAttribute('aria-valuenow', Math.round(f * 100));
+  let sub;
+  if (S.heat <= 0.001) sub = `<span class="bad">Freezing. A Jan leaves in ${fmtDur(BAL.leaveEvery - S.leaveT)}</span>`;
+  else if (f < BAL.coldLine) sub = `<span class="bad">Too cold: jobs at ${hasR(S, 'lanterns') ? 70 : 50}% speed</span>`;
+  else if (S.res.food <= 0) sub = '<span class="bad">Out of food: jobs slowed</span>';
+  else sub = `Burning ${fmtRate(S.lastBurn).replace('+', '')} Wood/s`;
+  $('heatSub').innerHTML = sub;
+
+  const cp = caps(S), cnt = jobCount(S);
+  const jc = $('chip-jans');
+  jc.querySelector('.val').textContent = `${S.jans.length}/${janCap(S)}`;
+  const js = jc.querySelector('.sub');
+  js.textContent = S.waiting.length ? `${S.waiting.length} waiting` : cnt.idle ? `${cnt.idle} idle` : 'all busy';
+  js.className = 'sub' + (S.waiting.length || cnt.idle ? ' down' : '');
+  for (const k of RES) {
+    const el = $('chip-' + k);
+    el.querySelector('.val').textContent = fmt(S.res[k]);
+    const sub = el.querySelector('.sub'), rt = r[k];
+    const full = k !== 'knowledge' && S.res[k] >= cp[k] - 0.01;
+    sub.textContent = full ? 'full' : fmtRate(rt) + '/s';
+    sub.className = 'sub num' + (full ? '' : rt > 0.005 ? ' up' : rt < -0.005 ? ' down' : '');
+    const bar = el.querySelector('.cap i');
+    if (bar) bar.style.width = Math.min(100, (S.res[k] / cp[k]) * 100) + '%';
+  }
+  $('winterLbl').textContent = `Winter ${S.winter} · Tier ${tierOf(S.bld.furnace)}`;
+
+  // forecast
+  const bz = S.bz, fc = $('forecast'), dur = bz.long ? BAL.blizzard.longDur : BAL.blizzard.dur;
+  const name = bz.long ? 'Long Night' : 'Blizzard';
+  if (bz.active) {
+    fc.className = 'forecast storm';
+    fc.innerHTML = `${FLAKE}<span><b>${name}</b> · ${fmtDur(bz.end - S.t)} left · heat drain ×${(BAL.blizzard.mult * rMult(S, 'blizzard')).toFixed(1).replace('.0', '')}</span>`;
+  } else {
+    const until = bz.next - S.t;
+    const need = Math.max(0, (woodBurnRate(S, true) - r.gross.wood) * dur);
+    if (bz.warned) {
+      fc.className = 'forecast warn';
+      const ok = S.res.wood >= need;
+      fc.innerHTML = `${FLAKE}<span><b>${name} in ${fmtDur(until)}.</b> ${need < 1 ? 'Your choppers can keep up.' : ok ? `Woodpile is ready (needs ${fmt(need)}).` : `Stockpile ${fmt(need)} Wood, you have ${fmt(S.res.wood)}.`}</span>`;
+    } else {
+      fc.className = 'forecast';
+      fc.innerHTML = `${FLAKE}<span>Clear skies. Next blizzard in about <b>${fmtDur(Math.ceil(until / 60) * 60)}</b></span>`;
+    }
+  }
+  const bb = $('jansBadge'), idle = cnt.idle;
+  bb.hidden = !idle; bb.textContent = idle;
+}
+
+// ---- City tab ----
+function nextUpgrade(r) {
+  const list = [];
+  for (const k of BLD_ORDER) {
+    if (!isUnlocked(S, k) || isMaxed(S, k)) continue;
+    const c = costOf(S, k);
+    list.push({ act: 'bld:' + k, name: S.bld[k] ? `${BLD[k].name} → Lv ${S.bld[k] + 1}` : `Build a ${BLD[k].name}`, desc: BLD[k].desc, cost: c, t: timeToAfford(c, r), furnace: k === 'furnace' });
+  }
+  const rs = RESEARCH.find(x => researchAvailable(S, x));
+  if (rs && S.bld.research) { const c = { knowledge: researchCost(S) }; list.push({ act: 'res:' + rs.id, name: `Learn ${rs.name}`, desc: rs.desc, cost: c, t: timeToAfford(c, r) }); }
+  list.sort((a, b) => (a.t - b.t) || (b.furnace - a.furnace) || ((a.cost.wood || 0) - (b.cost.wood || 0)));
+  const fur = list.find(x => x.furnace);
+  if (fur && fur.t === 0) return fur;
+  return list[0] || null;
+}
+function renderCity(r) {
+  const nx = nextUpgrade(r);
+  const sig = (nx ? nx.act + JSON.stringify(nx.cost) : '-') + canPrestige(S);
+  if (ui.sigs.city !== sig) {
+    ui.sigs.city = sig;
+    let h = '';
+    if (canPrestige(S)) h += `<div class="card thaw-card"><h3>The thaw</h3><div class="next"><div><div class="name">Spring is here</div><div class="desc">Begin a New Winter: earn ${tokensEarned(S)} Warmth Tokens and keep up to ${vetSlots(S)} Veteran Jans.</div></div><button class="btn" data-act="thaw">Begin</button></div></div>`;
+    if (nx) h += `<div class="card"><h3>Next upgrade</h3><div class="next"><div class="row-main"><div class="name">${esc(nx.name)}</div><div class="desc">${esc(nx.desc)}</div>${costHTML(nx.cost)}</div>${buyBtn('nextAct', nx.act, nx.cost, nx.act.startsWith('res') ? 'Learn' : 'Build')}</div></div>`;
+    $('cityCards').innerHTML = h;
+  }
+  refreshButtons($('cityCards'), r);
+  if (ui.sigs.log !== ui.logVer) {
+    ui.sigs.log = ui.logVer;
+    $('log').innerHTML = ui.log.length ? ui.log.map(l => `<li class="${l.hot ? 'hot' : ''}"><time>${fmtClock(l.t)}</time><span>${esc(l.text)}</span></li>`).join('') : '<li><time></time><span>Nothing yet. Tap the shivering Jan at the bottom of the city.</span></li>';
+  }
+  $('hint').hidden = !(S.stats.rescued < 2 && S.waiting.length);
+}
+const fmtClock = t => { t = Math.floor(t); const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`; };
+
+// ---- Build tab ----
+function renderBuild(r) {
+  const el = $('tab-build');
+  const sig = JSON.stringify([S.bld, S.research, S.tokens, S.shop, ui.seg, S.winter]);
+  if (ui.sigs.build !== sig) {
+    ui.sigs.build = sig;
+    const segs = [['buildings', 'Buildings'], ['research', 'Research']];
+    if (S.winter > 1 || S.tokens > 0) segs.push(['warmth', 'Warmth']);
+    let h = `<div class="seg" role="group" aria-label="Build sections">${segs.map(([k, n]) => `<button data-act="seg" data-arg="${k}" aria-pressed="${ui.seg === k}">${n}</button>`).join('')}</div>`;
+    if (ui.seg === 'buildings') {
+      h += '<div class="list">';
+      for (const k of BLD_ORDER) {
+        const B = BLD[k], lvl = S.bld[k];
+        if (!isUnlocked(S, k)) { h += `<div class="row locked"><div class="row-main"><div class="row-title">${B.name}</div><div class="row-desc">Unlocks at Furnace ${B.unlock}</div></div></div>`; continue; }
+        const ml = maxLevel(S, k), hardMax = lvl >= B.max;
+        let right, extra = '';
+        if (hardMax) right = '<span class="pill">Max</span>';
+        else if (lvl >= ml) { right = '<span class="pill">Capped</span>'; extra = `<div class="note">Can't outgrow the Furnace. Upgrade it to go past Lv ${ml}.</div>`; }
+        else { const c = costOf(S, k); right = buyBtn('buy', k, c, lvl ? 'Upgrade' : 'Build'); extra = costHTML(c); }
+        h += `<div class="row"><div class="row-main"><div class="row-title">${B.name} <span class="lvl">${lvl ? `Lv ${lvl}${hardMax ? '' : ' / ' + (k === 'furnace' ? B.max : ml)}` : 'Not built'}</span></div><div class="row-desc">${B.desc}</div>${extra}</div>${right}</div>`;
+      }
+      h += '</div>';
+    } else if (ui.seg === 'research') {
+      if (!S.bld.research) h += `<div class="card"><p class="note">Build a Research Hut (Furnace ${BLD.research.unlock}) and put Jans on Research to earn Knowledge.</p></div>`;
+      const c = { knowledge: researchCost(S) };
+      const avail = RESEARCH.filter(x => researchAvailable(S, x));
+      const locked = RESEARCH.filter(x => !S.research[x.id] && !researchAvailable(S, x));
+      h += `<p class="note">Every discovery costs more than the last. Next costs ${fmt(c.knowledge)} Knowledge.</p><div class="list">`;
+      for (const x of avail) h += `<div class="row"><div class="row-main"><div class="row-title">${x.name}</div><div class="row-desc">${x.desc}</div></div>${buyBtn('research', x.id, c, 'Learn')}</div>`;
+      for (const x of locked) h += `<div class="row locked"><div class="row-main"><div class="row-title">${x.name}</div><div class="row-desc">${x.desc} · needs ${x.after ? RESEARCH.find(y => y.id === x.after).name : 'Tier ' + x.tier}</div></div></div>`;
+      h += '</div>';
+      const done = RESEARCH.filter(x => S.research[x.id]);
+      if (done.length) h += `<div class="sec-title">Learned</div><div class="learned">${done.map(x => `<span class="pill ember" title="${x.desc}">${x.name}</span>`).join('')}</div>`;
+    } else {
+      h += `<div class="card"><div class="next"><div><div class="name">${S.tokens} Warmth Token${S.tokens === 1 ? '' : 's'}</div><div class="desc">Earned at each thaw. These bonuses are permanent.</div></div></div></div><div class="list">`;
+      for (const k in SHOP) {
+        const it = SHOP[k], rank = S.shop[k];
+        const right = rank >= it.max ? '<span class="pill">Max</span>' : `<button class="btn" data-act="shop" data-arg="${k}" ${S.tokens < it.cost ? 'disabled' : ''}>${it.cost} token${it.cost > 1 ? 's' : ''}</button>`;
+        h += `<div class="row"><div class="row-main"><div class="row-title">${it.name} <span class="lvl">${rank}/${it.max}</span></div><div class="row-desc">${it.desc}</div></div>${right}</div>`;
+      }
+      h += '</div>';
+    }
+    el.innerHTML = h;
+  }
+  refreshButtons(el, r);
+}
+
+// ---- Jans tab ----
+function renderJans(r) {
+  const el = $('tab-jans'), cnt = jobCount(S);
+  const sig = JSON.stringify([cnt, S.autoAssign, S.bld, S.lost.length, S.jans.map(j => j.v + j.vet).join()]);
+  const gm = globalMult(S);
+  if (ui.sigs.jans !== sig) {
+    ui.sigs.jans = sig;
+    let h = `<div class="card"><div class="next"><div><div class="name">${S.jans.length} Jans, ${cnt.idle} idle</div><div class="desc">Idle Jans still eat and still need heat.</div></div>${cnt.idle ? '' : '<span class="pill">All busy</span>'}</div></div>`;
+    h += `<div class="list"><div class="switch"><div class="row-main"><div class="row-title">Auto-assign</div><div class="row-desc">${S.bld.furnace >= 4 ? 'Newly rescued Jans go where they are needed most. Turning it on also places anyone idle.' : 'Unlocks at Tier 2 (Furnace 4).'}</div></div><button class="toggle" data-act="auto" aria-pressed="${S.autoAssign}" aria-label="Auto-assign" ${S.bld.furnace < 4 ? 'disabled' : ''}></button></div></div>`;
+    h += '<div class="list">';
+    for (const job of JOB_ORDER) {
+      const J = JOBS[job], B = BLD[J.bld];
+      if (!jobAvailable(S, job)) { h += `<div class="row locked"><div class="row-main"><div class="row-title">${J.name}</div><div class="row-desc">Build a ${B.name} (Furnace ${B.unlock})</div></div></div>`; continue; }
+      const what = job === 'scavenge' ? 'Random bursts of Wood, Food and Materials' : `Makes ${RES_NAME[J.res]}`;
+      h += `<div class="row job"><div class="row-main"><div class="row-title">${J.name} <span class="lvl">${B.name} Lv ${S.bld[J.bld]}</span></div><div class="row-desc">${what}</div><div class="rate c-${J.res || 'materials'}" data-rate="${job}"></div></div>
+        <div class="stepper"><button data-act="sub" data-arg="${job}" aria-label="Take a Jan off ${J.name}" ${cnt[job] ? '' : 'disabled'}>−</button><span class="count">${cnt[job]}</span><button data-act="add" data-arg="${job}" aria-label="Put a Jan on ${J.name}" ${cnt.idle ? '' : 'disabled'}>+</button></div></div>`;
+    }
+    h += '</div>';
+    const byV = {};
+    for (const j of S.jans) { const k = j.vet ? j.v + '*' : j.v; byV[k] = (byV[k] || 0) + 1; }
+    h += `<div class="sec-title">Who's here</div><div class="roster">${Object.entries(byV).map(([k, n]) => `<span class="pill${k.endsWith('*') ? ' ember' : ''}">${k.endsWith('*') ? 'Veteran ' : ''}${VARIANTS[k.replace('*', '')].name} × ${n}</span>`).join('')}</div>`;
+    if (S.lost.length) h += `<p class="note">${S.lost.length} Jan${S.lost.length > 1 ? 's' : ''} wandered off in the cold. They come back with the next caravan.</p>`;
+    el.innerHTML = h;
+  }
+  el.querySelectorAll('[data-rate]').forEach(d => {
+    const job = d.dataset.rate;
+    if (job === 'scavenge') { const n = cnt.scavenge; d.textContent = n ? `about 1 burst every ${fmtDur(scavInterval(S) / (n * gm))}` : 'No one scavenging'; }
+    else d.textContent = `${fmtRate(jobRate(S, job, gm))} ${RES_NAME[JOBS[job].res]}/s`;
+  });
+}
+
+// ---- Collection tab ----
+function renderFound() {
+  const el = $('tab-found');
+  const sig = JSON.stringify(S.found);
+  if (ui.sigs.found === sig) return;
+  ui.sigs.found = sig;
+  const seen = VARIANT_ORDER.filter(v => S.found[v] > 0).length;
+  let h = `<div class="progress-line"><b>${seen} of ${VARIANT_ORDER.length}</b> kinds of Jan found · ${S.stats.rescued} rescued in all</div><div class="grid2">`;
+  for (const v of VARIANT_ORDER) {
+    const V = VARIANTS[v], n = S.found[v];
+    h += n ? `<div class="jan-card"><canvas data-portrait="${v}" width="144" height="144"></canvas><b>${V.name}</b><div class="bonus">${V.bonus}</div><p>${CONTENT.bios[v]}</p><div class="seen">${v === 'veteran' ? 'Promoted' : 'Met'} × ${n}</div></div>`
+      : `<div class="jan-card unknown"><canvas data-portrait="${v}" data-sil="1" width="144" height="144"></canvas><b>???</b><p>${V.unlockText}</p></div>`;
+  }
+  el.innerHTML = h + '</div>';
+  el.querySelectorAll('canvas[data-portrait]').forEach(c => {
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, 144, 144);
+    const v = c.dataset.portrait;
+    drawJan(g, 72, 128, 13, v === 'veteran' ? 'plain' : v, { vet: v === 'veteran', sil: !!c.dataset.sil, t: 0 });
+  });
+}
+
+// ---- Sheets ----
+function openSheet(name) { ui.sheet = name; $('overlay').hidden = false; renderSheet(); }
+function closeSheet() { ui.sheet = null; $('overlay').hidden = true; }
+function renderSheet() {
+  const sh = $('sheet');
+  let h = '';
+  if (ui.sheet === 'intro') {
+    h = `<h2>Meagan vs. the Cold</h2><div class="story">${CONTENT.intro.map(l => `<p>${esc(l)}</p>`).join('')}</div>
+      <p class="tip">Tap frozen Jans at the bottom of the city to rescue them. Give them jobs, keep the furnace fed, and grow the city.</p>
+      <button class="btn wide" data-act="start">Light the furnace</button>`;
+  } else if (ui.sheet === 'welcome') {
+    const r = rates(S);
+    h = `<h2>The city waited for you</h2><p>Nothing happened while you were away. Everyone is right where you left them.</p>
+      <dl class="kv"><dt>Heat</dt><dd>${Math.round(S.heat / heatCap(S) * 100)}%</dd><dt>Jans</dt><dd>${S.jans.length} / ${janCap(S)}</dd><dt>Wood</dt><dd>${fmt(S.res.wood)} (${fmtRate(r.wood)}/s)</dd><dt>${S.bz.active ? 'Blizzard' : 'Next blizzard'}</dt><dd>${S.bz.active ? 'happening now' : 'in ' + fmtDur(S.bz.next - S.t) + ' of play'}</dd><dt>Winter ${S.winter} played</dt><dd>${fmtClock(S.t)}</dd></dl>
+      <p class="tip">${esc(pick(CONTENT.tips))}</p><button class="btn wide" data-act="start">Back to the fire</button>`;
+  } else if (ui.sheet === 'settings') {
+    h = `<h2>Settings</h2>
+      <div class="sec-title">Test speed</div><p class="note">For playtesting the balance. The real game runs at 1×.</p>
+      <div class="seg" role="group" aria-label="Test speed">${[1, 5, 20, 100].map(v => `<button data-act="speed" data-arg="${v}" aria-pressed="${ui.speed === v}">${v}×</button>`).join('')}</div>
+      <div class="list"><div class="switch"><div class="row-main"><div class="row-title">Pause the game</div><div class="row-desc">The game also pauses whenever this screen or the app is closed.</div></div><button class="toggle" data-act="pause" aria-pressed="${ui.manualPause}" aria-label="Pause"></button></div></div>
+      <div class="sec-title">Testing tools</div>
+      <div class="actions"><button class="btn ghost" data-act="cheat">Fill storage</button><button class="btn ghost" data-act="skipStorm" ${S.bz.active ? 'disabled' : ''}>Blizzard now</button></div>
+      <dl class="kv"><dt>This winter</dt><dd>${fmtClock(S.t)} played</dd><dt>All winters</dt><dd>${fmtClock(S.totalT)} played</dd><dt>Blizzards survived</dt><dd>${S.stats.blizzards}</dd></dl>
+      ${ui.confirmReset ? `<div class="card"><p><b>Start over from nothing?</b> This wipes every winter, token and Jan in the collection.</p><div class="actions"><button class="btn ghost" data-act="resetNo">Keep playing</button><button class="btn danger" data-act="resetYes">Wipe and restart</button></div></div>` : '<button class="btn quiet" data-act="reset">Start over…</button>'}
+      <p class="note">Prototype. Progress saves in this browser only.</p>
+      <button class="btn wide" data-act="closeSheet">Done</button>`;
+  } else if (ui.sheet === 'prestige') {
+    if (ui.prestigeStep === 0) {
+      h = `<h2>The thaw</h2><div class="story">${CONTENT.thaw.map(l => `<p>${esc(l)}</p>`).join('')}</div><div class="actions"><button class="btn ghost" data-act="closeSheet">Not yet</button><button class="btn" data-act="pNext">Choose veterans</button></div>`;
+    } else if (ui.prestigeStep === 1) {
+      const slots = vetSlots(S), used = Object.values(ui.vetPick).reduce((a, b) => a + b, 0);
+      const byV = {};
+      for (const j of S.jans) byV[j.v] = (byV[j.v] || 0) + 1;
+      h = `<h2>Who stays by the fire?</h2><p class="note">Pick up to ${slots}. Veterans start the next winter already rescued, keep their bonus, and add +5% to every job. <b>${used} of ${slots} chosen.</b></p><div class="list">`;
+      for (const v of VARIANT_ORDER) if (byV[v]) h += `<div class="row"><div class="row-main"><div class="row-title">${VARIANTS[v].name} <span class="lvl">${byV[v]} here</span></div><div class="row-desc">${VARIANTS[v].bonus}</div></div><div class="stepper"><button data-act="vetSub" data-arg="${v}" ${ui.vetPick[v] ? '' : 'disabled'} aria-label="Fewer">−</button><span class="count">${ui.vetPick[v] || 0}</span><button data-act="vetAdd" data-arg="${v}" ${used < slots && (ui.vetPick[v] || 0) < byV[v] ? '' : 'disabled'} aria-label="More">+</button></div></div>`;
+      h += `</div><button class="btn wide" data-act="pNext">Continue</button>`;
+    } else {
+      h = `<h2>Begin Winter ${S.winter + 1}?</h2><dl class="kv"><dt>Warmth Tokens earned</dt><dd>${tokensEarned(S)}</dd><dt>Veterans</dt><dd>${Object.values(ui.vetPick).reduce((a, b) => a + b, 0)}</dd><dt>Kept</dt><dd>Collection, tokens, bonuses</dd><dt>Reset</dt><dd>Buildings, resources, research</dd></dl>
+        <div class="actions"><button class="btn ghost" data-act="closeSheet">Not yet</button><button class="btn" data-act="pDo">Begin the winter</button></div>`;
+    }
+  }
+  sh.innerHTML = h;
+}
+
+// ---- Toasts ----
+function updateToast() {
+  const now = performance.now(), el = $('toast');
+  if (ui.toastUntil && now < ui.toastUntil) return;
+  if (ui.toastQ.length) {
+    const t = ui.toastQ.shift();
+    el.innerHTML = `<small>${esc(t.kicker)}</small><b>${esc(t.title)}</b><span>${esc(t.text)}</span>`;
+    el.hidden = false; ui.toastUntil = now + 6500;
+  } else if (!el.hidden) { el.hidden = true; ui.toastUntil = 0; }
+}
+
+/* ===================== SCENE ===================== */
+// Everything in the city is drawn with simple shapes: placeholder art until the real avatars exist.
+const PARKA = { plain: '#C2503A', chef: '#D8663A', spreadsheet: '#3D6D8D', lumberjack: '#A9352B', sleepy: '#7486B0', keys: '#5F8A4C', dj: '#6A4C93', veteran: '#8A7A5C' };
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function ell(c, x, y, rx, ry, fill) { c.beginPath(); c.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, Math.PI * 2); c.fillStyle = fill; c.fill(); }
+
+// x,y = feet; k = unit size (about 1/20 of the figure's height)
+function drawJan(c, x, y, k, v, o = {}) {
+  const sil = o.sil, bob = o.bob || 0, frozen = o.frozen || 0;
+  const col = n => (sil ? '#9AABBA' : n);
+  c.save();
+  c.translate(x, y + bob);
+  if (!sil) ell(c, 0, 0, 3.4 * k, 1.1 * k, 'rgba(30,50,70,.18)');
+  // legs
+  c.fillStyle = col('#3A4553');
+  rr(c, -1.9 * k, -2.4 * k, 1.5 * k, 2.4 * k, 0.6 * k); c.fill();
+  rr(c, 0.4 * k, -2.4 * k, 1.5 * k, 2.4 * k, 0.6 * k); c.fill();
+  // parka
+  c.fillStyle = col(PARKA[v] || PARKA.plain);
+  rr(c, -3 * k, -8 * k, 6 * k, 6.2 * k, 2.4 * k); c.fill();
+  if (v === 'lumberjack' && !sil) { c.fillStyle = 'rgba(25,20,20,.45)'; for (let i = -2; i <= 2; i += 2) c.fillRect(i * k - 0.35 * k, -7.6 * k, 0.7 * k, 5.4 * k); c.fillRect(-2.8 * k, -5.6 * k, 5.6 * k, 0.7 * k); }
+  if (v === 'chef' && !sil) { c.fillStyle = '#F7F4EE'; rr(c, -1.9 * k, -6.8 * k, 3.8 * k, 4.6 * k, 0.8 * k); c.fill(); }
+  if (v === 'sleepy' && !sil) { c.fillStyle = '#A9B8D8'; rr(c, -3.3 * k, -7 * k, 6.6 * k, 3.4 * k, 1.4 * k); c.fill(); }
+  // hood
+  c.beginPath(); c.arc(0, -10.2 * k, 3.1 * k, 0, Math.PI * 2); c.fillStyle = col(sil ? '#9AABBA' : shade(PARKA[v] || PARKA.plain, -0.18)); c.fill();
+  // fur trim + face
+  c.beginPath(); c.arc(0, -10 * k, 2.45 * k, 0, Math.PI * 2); c.fillStyle = col('#EEE6DA'); c.fill();
+  c.beginPath(); c.arc(0, -10 * k, 1.9 * k, 0, Math.PI * 2); c.fillStyle = col('#F0C8A4'); c.fill();
+  if (!sil) {
+    c.fillStyle = '#2A2F36';
+    if (v === 'sleepy') { c.fillRect(-1.1 * k, -10.5 * k, 0.8 * k, 0.25 * k); c.fillRect(0.3 * k, -10.5 * k, 0.8 * k, 0.25 * k); }
+    else { ell(c, -0.7 * k, -10.4 * k, 0.28 * k, 0.32 * k, '#2A2F36'); ell(c, 0.7 * k, -10.4 * k, 0.28 * k, 0.32 * k, '#2A2F36'); }
+    ell(c, 0, -9.5 * k, 0.45 * k, 0.4 * k, '#D9544A'); // the red nose
+    if (o.vet || v === 'veteran') { c.beginPath(); c.arc(0, -9.4 * k, 1.6 * k, 0.1, Math.PI - 0.1); c.fillStyle = '#C9CCD1'; c.fill(); ell(c, 1.6 * k, -6.4 * k, 0.6 * k, 0.6 * k, '#E2B13C'); }
+    if (v === 'chef') { c.fillStyle = '#FFFFFF'; rr(c, -1.8 * k, -15.4 * k, 3.6 * k, 2.6 * k, 0.6 * k); c.fill(); ell(c, 0, -15.6 * k, 2.2 * k, 1.3 * k, '#FFFFFF'); }
+    if (v === 'spreadsheet') { c.fillStyle = '#D9C49A'; rr(c, 2.2 * k, -6.8 * k, 2.4 * k, 3.2 * k, 0.3 * k); c.fill(); c.fillStyle = '#7A6A4A'; for (let i = 0; i < 3; i++) c.fillRect(2.6 * k, (-6.1 + i * 0.8) * k, 1.6 * k, 0.25 * k); }
+    if (v === 'lumberjack') { c.strokeStyle = '#6B4A2E'; c.lineWidth = 0.6 * k; c.beginPath(); c.moveTo(3 * k, -3 * k); c.lineTo(4.6 * k, -8.4 * k); c.stroke(); c.fillStyle = '#9AA4AE'; c.beginPath(); c.moveTo(4.2 * k, -8.6 * k); c.lineTo(6.2 * k, -8 * k); c.lineTo(5 * k, -6.8 * k); c.closePath(); c.fill(); }
+    if (v === 'keys') { c.strokeStyle = '#D6A72E'; c.lineWidth = 0.5 * k; c.beginPath(); c.arc(3.4 * k, -4.6 * k, 0.8 * k, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.moveTo(3.4 * k, -3.8 * k); c.lineTo(3.4 * k, -2.2 * k); c.stroke(); }
+    if (v === 'dj') { c.strokeStyle = '#22252A'; c.lineWidth = 0.7 * k; c.beginPath(); c.arc(0, -10.4 * k, 3.4 * k, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); ell(c, -3.1 * k, -10 * k, 0.9 * k, 1.2 * k, '#E2483C'); ell(c, 3.1 * k, -10 * k, 0.9 * k, 1.2 * k, '#E2483C'); }
+    if (v === 'sleepy' && o.t != null) { c.fillStyle = '#5A6B7C'; c.font = `700 ${2.4 * k}px system-ui`; c.fillText('z', 2.6 * k, (-13.5 - ((o.t * 0.8) % 2)) * k); }
+  }
+  if (frozen > 0) {
+    c.globalAlpha = frozen * 0.55; c.fillStyle = '#BFE3F5';
+    rr(c, -3.4 * k, -13.6 * k, 6.8 * k, 13.6 * k, 3 * k); c.fill();
+    c.globalAlpha = frozen; c.strokeStyle = '#7FC1DF'; c.lineWidth = 0.4 * k; c.stroke();
+  }
+  c.restore();
+}
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = ch => clamp(Math.round(ch + (amt < 0 ? ch * amt : (255 - ch) * amt)), 0, 255);
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+function drawMeagan(c, x, y, k, t, walking) {
+  const step = walking ? Math.sin(t * 12) * 0.6 * k : 0;
+  c.save(); c.translate(x, y);
+  ell(c, 0, 0, 4.6 * k, 1.5 * k, 'rgba(221,91,26,.25)');
+  c.fillStyle = '#2E3440';
+  rr(c, -2 * k, -2.6 * k + step, 1.6 * k, 2.6 * k, 0.6 * k); c.fill();
+  rr(c, 0.4 * k, -2.6 * k - step, 1.6 * k, 2.6 * k, 0.6 * k); c.fill();
+  // long coat
+  c.fillStyle = '#1E6E77'; rr(c, -3.3 * k, -9.4 * k, 6.6 * k, 7.6 * k, 2.4 * k); c.fill();
+  c.fillStyle = '#E8B04A'; c.fillRect(-0.25 * k, -8.6 * k, 0.5 * k, 6 * k);
+  // hair behind
+  c.fillStyle = '#6B3E26'; rr(c, -2.8 * k, -13.2 * k, 5.6 * k, 6.4 * k, 2.4 * k); c.fill();
+  // face
+  c.beginPath(); c.arc(0, -11.6 * k, 2.1 * k, 0, Math.PI * 2); c.fillStyle = '#F2CCAA'; c.fill();
+  ell(c, -0.75 * k, -11.8 * k, 0.28 * k, 0.32 * k, '#2A2F36'); ell(c, 0.75 * k, -11.8 * k, 0.28 * k, 0.32 * k, '#2A2F36');
+  c.strokeStyle = '#9A4A3A'; c.lineWidth = 0.35 * k; c.beginPath(); c.arc(0, -11 * k, 0.8 * k, 0.2, Math.PI - 0.2); c.stroke();
+  // beanie with pom-pom
+  c.fillStyle = '#F2EBDD'; c.beginPath(); c.arc(0, -12.6 * k, 2.4 * k, Math.PI, 0); c.fill();
+  c.fillStyle = '#DD5B1A'; c.fillRect(-2.4 * k, -12.9 * k, 4.8 * k, 0.9 * k);
+  ell(c, 0, -15.3 * k, 1 * k, 1 * k, '#F2EBDD');
+  // scarf
+  c.fillStyle = '#DD5B1A'; rr(c, -2.4 * k, -9.8 * k, 4.8 * k, 1.4 * k, 0.6 * k); c.fill(); c.fillRect(1.2 * k, -9 * k, 1.2 * k, 3.4 * k);
+  c.restore();
+}
+
+const ZONE = { chop: [0.17, 0.3], hunt: [0.83, 0.3], build: [0.17, 0.68], research: [0.83, 0.68], scavenge: [0.5, 0.15] };
+const FURNACE = [0.5, 0.52], HOME = [0.6, 0.62];
+const scene = {
+  cv: null, c: null, W: 300, H: 260, k: 1, dpr: 1, t: 0,
+  sprites: new Map(), meg: null, bubbles: [], floats: [], flakes: [], chatT: 10, shake: 0, flash: 0,
+  init() {
+    this.cv = $('scene'); this.c = this.cv.getContext('2d');
+    new ResizeObserver(() => this.resize()).observe($('sceneWrap'));
+    this.resize();
+    this.cv.addEventListener('pointerdown', e => this.tap(e));
+    this.reset();
+  },
+  reset() {
+    this.sprites.clear(); this.bubbles = []; this.floats = [];
+    const [hx, hy] = this.P(HOME);
+    this.meg = { x: hx, y: hy, tx: hx, ty: hy };
+  },
+  resize() {
+    const r = this.cv.getBoundingClientRect();
+    if (!r.width) return;
+    const oldW = this.W, oldH = this.H;
+    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.cv.width = Math.round(r.width * this.dpr); this.cv.height = Math.round(r.height * this.dpr);
+    this.W = r.width; this.H = r.height; this.k = Math.min(this.W, this.H) / 100;
+    for (const s of this.sprites.values()) { s.x *= this.W / oldW; s.y *= this.H / oldH; s.tx *= this.W / oldW; s.ty *= this.H / oldH; }
+    if (this.meg) { this.meg.x *= this.W / oldW; this.meg.y *= this.H / oldH; const [hx, hy] = this.P(HOME); this.meg.tx = hx; this.meg.ty = hy; }
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.flakes = Array.from({ length: reduce ? 20 : 70 }, () => ({ x: Math.random() * this.W, y: Math.random() * this.H, r: 0.6 + Math.random() * 1.6, v: 10 + Math.random() * 18, p: Math.random() * 6 }));
+  },
+  P(p) { return [p[0] * this.W, p[1] * this.H]; },
+  slotPos(slot) { return [this.W * (0.1 + slot * 0.133), this.H * 0.94]; },
+  target(sp) {
+    const W = this.W, H = this.H;
+    if (sp.job === 'idle' || !ZONE[sp.job]) {
+      const a = Math.PI * (0.15 + Math.random() * 0.7);
+      return [W * FURNACE[0] + Math.cos(a) * W * 0.16 * (Math.random() < 0.5 ? -1 : 1), H * FURNACE[1] + Math.sin(a) * H * 0.12 + H * 0.03];
+    }
+    const [zx, zy] = ZONE[sp.job];
+    return [W * zx + (Math.random() - 0.5) * W * 0.16, H * zy + H * 0.06 + (Math.random() - 0.5) * H * 0.07];
+  },
+  sync() {
+    const ids = new Set();
+    for (const j of S.jans) {
+      ids.add(j.id);
+      let sp = this.sprites.get(j.id);
+      if (!sp) { const [x, y] = this.P(FURNACE); sp = { id: j.id, x, y: y + this.H * 0.08, tx: x, ty: y, job: null, wait: 0, frozen: 0, hold: 0, ph: Math.random() * 6 }; this.sprites.set(j.id, sp); }
+      sp.v = j.v; sp.vet = j.vet;
+      if (sp.job !== j.job) { sp.job = j.job; [sp.tx, sp.ty] = this.target(sp); sp.wait = 0; }
+    }
+    for (const id of [...this.sprites.keys()]) if (!ids.has(id)) this.sprites.delete(id);
+  },
+  rescued(jan, slot, line) {
+    const [x, y] = this.slotPos(slot);
+    const sp = { id: jan.id, x, y, tx: x, ty: y, job: null, wait: 0, frozen: 1, hold: 1.4, ph: 0, v: jan.v, vet: jan.vet };
+    this.sprites.set(jan.id, sp);
+    this.meg.tx = x + this.k * 6; this.meg.ty = y - this.k * 2; this.meg.back = 1.6;
+    this.say({ id: jan.id }, line, 4.5);
+  },
+  say(anchor, text, dur = 3.5) { this.bubbles = this.bubbles.filter(b => !(b.anchor.id != null && b.anchor.id === anchor.id)); this.bubbles.push({ anchor, text, until: this.t + dur }); if (this.bubbles.length > 3) this.bubbles.shift(); },
+  float(anchor, text, res) { this.floats.push({ anchor, text, res, t0: this.t }); },
+  furnaceFx() { this.flash = 1; },
+  lostFx() { this.shake = 0.6; },
+  anchorPos(a) {
+    if (a === 'scavenge') { const [x, y] = this.P(ZONE.scavenge); return [x, y - this.k * 6]; }
+    if (a === 'furnace') { const [x, y] = this.P(FURNACE); return [x, y - this.k * 22]; }
+    if (a === 'meagan') return [this.meg.x, this.meg.y - this.k * 17];
+    if (a.slot != null) { const [x, y] = this.slotPos(a.slot); return [x, y - this.k * 14]; }
+    const sp = this.sprites.get(a.id);
+    return sp ? [sp.x, sp.y - this.k * 15] : null;
+  },
+  tap(e) {
+    const r = this.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, k = this.k;
+    let best = null, bd = Infinity;
+    for (const w of S.waiting) { const [wx, wy] = this.slotPos(w.slot); const d = Math.hypot(x - wx, y - (wy - 6 * k)); if (d < 11 * k && d < bd) { bd = d; best = w; } }
+    if (best) { doRescue(best.id); return; }
+    const [fx, fy] = this.P(FURNACE);
+    if (Math.abs(x - fx) < 11 * k && y < fy + 2 * k && y > fy - 22 * k) { this.say('furnace', `Heat ${Math.round(S.heat / heatCap(S) * 100)}%. Burning ${fmtRate(S.lastBurn).replace('+', '')} Wood a second.`); return; }
+    if (Math.hypot(x - this.meg.x, y - (this.meg.y - 8 * k)) < 7 * k) { this.say('meagan', pick(CONTENT.meagan)); return; }
+    let sp = null; bd = Infinity;
+    for (const s of this.sprites.values()) { const d = Math.hypot(x - s.x, y - (s.y - 6 * k)); if (d < 8 * k && d < bd) { bd = d; sp = s; } }
+    if (sp) this.say({ id: sp.id }, `${VARIANTS[sp.v].name}${sp.vet ? ' (Veteran)' : ''}: ${pick(CONTENT.chatter)}`);
+  },
+  update(dt) {
+    this.t += dt;
+    this.sync();
+    const k = this.k, speed = 14 * k;
+    for (const sp of this.sprites.values()) {
+      if (sp.frozen > 0 && sp.hold <= 0.6) sp.frozen = Math.max(0, sp.frozen - dt * 1.5);
+      if (sp.hold > 0) { sp.hold -= dt; continue; }
+      const dx = sp.tx - sp.x, dy = sp.ty - sp.y, d = Math.hypot(dx, dy);
+      if (d > 1) { const m = Math.min(d, speed * dt); sp.x += dx / d * m; sp.y += dy / d * m; sp.moving = true; }
+      else { sp.moving = false; sp.wait -= dt; if (sp.wait <= 0) { sp.wait = 2 + Math.random() * 5; [sp.tx, sp.ty] = this.target(sp); } }
+    }
+    const m = this.meg, dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy);
+    if (d > 1) { const s = Math.min(d, 40 * k * dt); m.x += dx / d * s; m.y += dy / d * s; m.walking = true; }
+    else { m.walking = false; if (m.back > 0) { m.back -= dt; if (m.back <= 0) { const [hx, hy] = this.P(HOME); m.tx = hx; m.ty = hy; } } }
+    this.chatT -= dt;
+    if (this.chatT <= 0) { this.chatT = 18 + Math.random() * 14; const arr = [...this.sprites.values()].filter(s => !s.hold); if (arr.length) this.say({ id: pick(arr).id }, pick(CONTENT.chatter)); }
+    this.bubbles = this.bubbles.filter(b => b.until > this.t && this.anchorPos(b.anchor));
+    this.floats = this.floats.filter(f => this.t - f.t0 < 2.2);
+    const storm = S.bz.active, wind = storm ? 90 : 8;
+    for (const f of this.flakes) { f.y += (storm ? f.v * 2.6 : f.v) * dt; f.x += (wind + Math.sin(this.t + f.p) * 6) * dt; if (f.y > this.H) { f.y = -4; f.x = Math.random() * this.W; } if (f.x > this.W + 4) f.x = -4; }
+    this.shake = Math.max(0, this.shake - dt); this.flash = Math.max(0, this.flash - dt * 0.8);
+  },
+  draw() {
+    const c = this.c, W = this.W, H = this.H, k = this.k, t = this.t;
+    const hf = clamp(S.heat / heatCap(S), 0, 1), tier = tierOf(S.bld.furnace);
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    c.save();
+    if (this.shake) c.translate(Math.sin(t * 60) * this.shake * 3, 0);
+    // ground
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#EEF4F8'); g.addColorStop(1, '#DCE6EE'); c.fillStyle = g; c.fillRect(-10, 0, W + 20, H);
+    for (let i = 0; i < 14; i++) { const sx = ((i * 97) % 100) / 100 * W, sy = ((i * 61 + 13) % 100) / 100 * H; ell(c, sx, sy, (5 + (i % 4) * 2) * k, (1.5 + (i % 3)) * k, 'rgba(255,255,255,.65)'); }
+    const [fx, fy] = this.P(FURNACE);
+    // paths
+    c.strokeStyle = '#D3DEE7'; c.lineWidth = 3.4 * k; c.lineCap = 'round';
+    for (const job of JOB_ORDER) { if (!S.bld[JOBS[job].bld]) continue; const [zx, zy] = this.P(ZONE[job]); c.beginPath(); c.moveTo(fx, fy); c.quadraticCurveTo((fx + zx) / 2, zy + (fy - zy) * 0.2, zx, zy + 3 * k); c.stroke(); }
+    c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx, H); c.stroke();
+    // warm glow
+    const gr = (22 + 38 * hf) * k * (1 + this.flash * 0.4);
+    const glow = c.createRadialGradient(fx, fy - 5 * k, 2 * k, fx, fy - 5 * k, gr);
+    glow.addColorStop(0, `rgba(255,170,90,${0.15 + 0.4 * hf})`); glow.addColorStop(1, 'rgba(255,170,90,0)');
+    c.fillStyle = glow; c.beginPath(); c.arc(fx, fy - 5 * k, gr, 0, Math.PI * 2); c.fill();
+
+    // depth-sorted drawables
+    const items = [];
+    const add = (y, fn) => items.push({ y, fn });
+    add(fy, () => this.drawFurnace(fx, fy, hf));
+    const Z = key => this.P(ZONE[key]);
+    { const [x, y] = Z('chop'); add(y, () => this.drawForest(x, y)); }
+    { const [x, y] = Z('hunt'); add(y, () => this.drawLodge(x, y)); }
+    { const [x, y] = Z('build'); add(y, () => S.bld.workshop ? this.drawWorkshop(x, y) : this.drawPlot(x, y, 'Workshop')); }
+    { const [x, y] = Z('research'); add(y, () => S.bld.research ? this.drawHut(x, y) : this.drawPlot(x, y, 'Research Hut')); }
+    { const [x, y] = Z('scavenge'); add(y, () => S.bld.expedition ? this.drawPost(x, y) : null); }
+    if (S.bld.storehouse) add(H * 0.36, () => this.drawShed(W * 0.33, H * 0.36, '#9C7B5C'));
+    if (S.bld.kitchen) add(H * 0.36, () => this.drawShed(W * 0.67, H * 0.36, '#B5694A', true));
+    if (S.bld.bunkhouse) add(H * 0.8, () => this.drawCabin(W * 0.3, H * 0.8));
+    if (S.bld.springs) add(H * 0.8, () => this.drawSprings(W * 0.7, H * 0.8));
+    if (S.bld.watchtower) add(H * 0.46, () => this.drawTower(W * 0.94, H * 0.46));
+    for (const sp of this.sprites.values()) add(sp.y, () => drawJan(c, sp.x, sp.y, k * 0.82, sp.v, { vet: sp.vet, frozen: sp.frozen, bob: sp.moving ? -Math.abs(Math.sin(t * 10 + sp.ph)) * 0.8 * k : (sp.job !== 'idle' ? -Math.abs(Math.sin(t * 4 + sp.ph)) * 0.4 * k : 0), t }));
+    add(this.meg.y, () => drawMeagan(c, this.meg.x, this.meg.y, k * 0.9, t, this.meg.walking));
+    items.sort((a, b) => a.y - b.y).forEach(i => i.fn());
+
+    // tier lights
+    if (tier >= 2) this.drawLights(fx, fy, tier, t);
+
+    // the edge of town and the frozen arrivals
+    c.fillStyle = 'rgba(205,220,232,.7)'; c.fillRect(0, H * 0.86, W, H * 0.14);
+    const full = S.jans.length >= janCap(S);
+    for (const w of S.waiting) {
+      const [x, y] = this.slotPos(w.slot), jit = Math.sin(t * 40 + w.id) * 0.35 * k;
+      drawJan(c, x + jit, y, k * 0.82, w.v || 'plain', { frozen: 1, sil: false, t });
+      const pulse = 1 + Math.sin(t * 5 + w.id) * 0.12;
+      c.beginPath(); c.arc(x, y - 16 * k, 3 * k * pulse, 0, Math.PI * 2); c.fillStyle = full ? '#8A9AAA' : '#DD5B1A'; c.fill();
+      c.fillStyle = '#fff'; c.font = `${4 * k}px 'Lilita One', system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(full ? '…' : '!', x, y - 15.8 * k);
+    }
+
+    // snow and weather
+    c.fillStyle = 'rgba(255,255,255,.9)';
+    for (const f of this.flakes) { c.beginPath(); c.arc(f.x, f.y, f.r, 0, Math.PI * 2); c.fill(); }
+    if (S.bz.active) { c.fillStyle = 'rgba(228,238,246,.42)'; c.fillRect(-10, 0, W + 20, H); c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1; for (let i = 0; i < 18; i++) { const sx = ((i * 53 + t * 260) % (W + 60)) - 30, sy = (i * 37) % H; c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx + 26, sy + 8); c.stroke(); } }
+    c.fillStyle = `rgba(40,75,115,${(1 - hf) * 0.22})`; c.fillRect(-10, 0, W + 20, H);
+    if (hf < BAL.coldLine) { const a = (BAL.coldLine - hf) / BAL.coldLine; const v = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75); v.addColorStop(0, 'rgba(190,225,245,0)'); v.addColorStop(1, `rgba(170,215,240,${0.75 * a})`); c.fillStyle = v; c.fillRect(-10, 0, W + 20, H); }
+
+    // floats and bubbles on top
+    for (const f of this.floats) {
+      const p = this.anchorPos(f.anchor); if (!p) continue;
+      const a = (this.t - f.t0) / 2.2;
+      c.globalAlpha = 1 - a; c.font = `${4.4 * k}px 'Lilita One', system-ui`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      c.lineWidth = 3; c.strokeStyle = '#fff'; c.strokeText(f.text, p[0], p[1] - a * 10 * k); c.fillStyle = f.res === 'wood' ? '#8A5A34' : f.res === 'food' ? '#B04B33' : '#4F6A86'; c.fillText(f.text, p[0], p[1] - a * 10 * k);
+      c.globalAlpha = 1;
+    }
+    for (const b of this.bubbles) { const p = this.anchorPos(b.anchor); if (p) this.drawBubble(p[0], p[1], b.text); }
+    c.restore();
+  },
+  drawBubble(x, y, text) {
+    const c = this.c, fs = 12.5, pad = 7, maxW = Math.min(210, this.W * 0.62);
+    c.font = `700 ${fs}px 'Atkinson Hyperlegible', system-ui`;
+    const words = text.split(' '), lines = []; let line = '';
+    for (const w of words) { const tst = line ? line + ' ' + w : w; if (c.measureText(tst).width > maxW - pad * 2 && line) { lines.push(line); line = w; } else line = tst; }
+    lines.push(line);
+    const w = Math.min(maxW, Math.max(...lines.map(l => c.measureText(l).width)) + pad * 2), h = lines.length * (fs + 3) + pad * 2 - 3;
+    let bx = clamp(x - w / 2, 4, this.W - w - 4), by = Math.max(4, y - h - 8);
+    c.fillStyle = 'rgba(26,41,56,.12)'; rr(c, bx + 1, by + 2, w, h, 9); c.fill();
+    c.fillStyle = '#FFFFFF'; rr(c, bx, by, w, h, 9); c.fill();
+    c.beginPath(); c.moveTo(clamp(x, bx + 10, bx + w - 10) - 6, by + h - 1); c.lineTo(clamp(x, bx + 10, bx + w - 10), by + h + 7); c.lineTo(clamp(x, bx + 10, bx + w - 10) + 6, by + h - 1); c.fill();
+    c.fillStyle = '#1A2938'; c.textAlign = 'left'; c.textBaseline = 'top';
+    lines.forEach((l, i) => c.fillText(l, bx + pad, by + pad + i * (fs + 3)));
+  },
+  drawFurnace(x, y, hf) {
+    const c = this.c, k = this.k, w = 17 * k, h = 15 * k, t = this.t, lvl = S.bld.furnace;
+    ell(c, x, y, w * 0.62, 2.6 * k, 'rgba(30,50,70,.2)');
+    // smoke
+    for (let i = 0; i < 4; i++) { const p = (t * 0.22 + i / 4) % 1; ell(c, x + w * 0.22 + Math.sin(p * 5 + i) * 2 * k, y - h - 7 * k - p * 20 * k, (1.6 + p * 3.6) * k, (1.6 + p * 3.6) * k, `rgba(140,150,165,${(1 - p) * (0.15 + 0.3 * hf)})`); }
+    c.fillStyle = '#56606D'; rr(c, x + w * 0.12, y - h - 7 * k, w * 0.22, 8 * k, 1.2 * k); c.fill();
+    c.fillStyle = '#7D8896'; rr(c, x - w / 2, y - h, w, h, 3.4 * k); c.fill();
+    c.fillStyle = '#909BA8';
+    for (let r = 0; r < 3; r++) for (let i = 0; i < 3; i++) { if ((r + i) % 2) continue; rr(c, x - w / 2 + 1.5 * k + i * 5 * k + (r % 2) * 2.5 * k, y - h + 1.6 * k + r * 4.2 * k, 3.6 * k, 2.6 * k, 0.8 * k); c.fill(); }
+    // snow cap
+    c.fillStyle = '#FFFFFF'; rr(c, x - w / 2 - 0.6 * k, y - h - 1 * k, w + 1.2 * k, 2.6 * k, 1.3 * k); c.fill();
+    // mouth
+    const mw = w * 0.52, mh = h * 0.56, mx = x - mw / 2, my = y - mh - 1 * k;
+    c.fillStyle = '#2E2A2A'; c.beginPath(); c.moveTo(mx, y - 1 * k); c.lineTo(mx, my + mw / 2); c.arc(x, my + mw / 2, mw / 2, Math.PI, 0); c.lineTo(mx + mw, y - 1 * k); c.closePath(); c.fill();
+    const fire = c.createRadialGradient(x, y - 3 * k, 0.5 * k, x, y - 3 * k, mh);
+    const flick = 0.85 + Math.sin(t * 13) * 0.08 + Math.sin(t * 7.3) * 0.07;
+    fire.addColorStop(0, `rgba(255,236,150,${0.95 * hf * flick + 0.05})`); fire.addColorStop(0.5, `rgba(250,140,40,${0.85 * hf * flick})`); fire.addColorStop(1, 'rgba(200,60,20,0)');
+    c.fillStyle = fire; c.fill();
+    // level plate
+    c.fillStyle = '#DD5B1A'; rr(c, x - 3.4 * k, y - h - 4.4 * k, 6.8 * k, 4 * k, 1 * k); c.fill();
+    c.fillStyle = '#fff'; c.font = `${3.2 * k}px 'Lilita One', system-ui`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(lvl, x, y - h - 2.3 * k);
+  },
+  tree(x, y, s) { const c = this.c, k = this.k * s; c.fillStyle = '#6B4A2E'; c.fillRect(x - 0.7 * k, y - 2.4 * k, 1.4 * k, 2.4 * k); c.fillStyle = '#2F5D50'; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(x, y - (11 - i * 2) * k); c.lineTo(x - (3 + i * 1.3) * k, y - (5.4 - i * 1.6) * k); c.lineTo(x + (3 + i * 1.3) * k, y - (5.4 - i * 1.6) * k); c.closePath(); c.fill(); } c.fillStyle = '#FFFFFF'; c.beginPath(); c.moveTo(x, y - 11 * k); c.lineTo(x - 1.6 * k, y - 8.6 * k); c.lineTo(x + 1.6 * k, y - 8.6 * k); c.closePath(); c.fill(); },
+  drawForest(x, y) {
+    const c = this.c, k = this.k, n = Math.min(5, 2 + Math.floor(S.bld.lumber / 5));
+    const spots = [[-7, -1, 1.05], [0, -4, 1.2], [7, -0.5, 1], [-12, 2, 0.85], [12, 2.5, 0.9]];
+    for (let i = 0; i < n; i++) this.tree(x + spots[i][0] * k, y + spots[i][1] * k, spots[i][2]);
+    for (let i = 0; i < 3; i++) { ell(c, x + (3 + i * 2.6) * k, y + 3.6 * k, 1.3 * k, 1.3 * k, '#8A5A34'); ell(c, x + (3 + i * 2.6) * k, y + 3.6 * k, 0.7 * k, 0.7 * k, '#C99A6A'); }
+  },
+  drawLodge(x, y) {
+    const c = this.c, k = this.k;
+    ell(c, x, y + 1 * k, 9 * k, 2 * k, 'rgba(30,50,70,.15)');
+    c.fillStyle = '#8B5E3C'; c.beginPath(); c.moveTo(x, y - 12 * k); c.lineTo(x - 8.5 * k, y + 1 * k); c.lineTo(x + 8.5 * k, y + 1 * k); c.closePath(); c.fill();
+    c.fillStyle = '#3A2A20'; c.beginPath(); c.moveTo(x, y - 5 * k); c.lineTo(x - 2.6 * k, y + 1 * k); c.lineTo(x + 2.6 * k, y + 1 * k); c.closePath(); c.fill();
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = 1.4 * k; c.lineCap = 'round'; c.beginPath(); c.moveTo(x - 6 * k, y - 3 * k); c.lineTo(x, y - 12 * k); c.lineTo(x + 6 * k, y - 3 * k); c.stroke();
+    c.strokeStyle = '#6B4A2E'; c.lineWidth = 0.6 * k; c.beginPath(); c.moveTo(x - 1.5 * k, y - 13.5 * k); c.lineTo(x, y - 11.5 * k); c.lineTo(x + 1.5 * k, y - 13.5 * k); c.stroke();
+    c.fillStyle = '#6B4A2E'; c.fillRect(x + 9 * k, y - 5 * k, 0.6 * k, 6 * k); c.fillRect(x + 13 * k, y - 5 * k, 0.6 * k, 6 * k); c.fillRect(x + 9 * k, y - 5 * k, 4.6 * k, 0.6 * k);
+    ell(c, x + 11.3 * k, y - 3.4 * k, 1.4 * k, 0.6 * k, '#B04B33');
+  },
+  drawWorkshop(x, y) {
+    const c = this.c, k = this.k;
+    ell(c, x, y + 1 * k, 9 * k, 2 * k, 'rgba(30,50,70,.15)');
+    c.fillStyle = '#A87B57'; c.fillRect(x - 7 * k, y - 8 * k, 14 * k, 9 * k);
+    c.fillStyle = '#6E4B35'; c.beginPath(); c.moveTo(x - 8.5 * k, y - 7.5 * k); c.lineTo(x, y - 13.5 * k); c.lineTo(x + 8.5 * k, y - 7.5 * k); c.closePath(); c.fill();
+    c.fillStyle = '#FFFFFF'; c.beginPath(); c.moveTo(x - 8.5 * k, y - 7.5 * k); c.lineTo(x, y - 13.5 * k); c.lineTo(x + 8.5 * k, y - 7.5 * k); c.lineTo(x + 6.5 * k, y - 8.8 * k); c.lineTo(x, y - 12 * k); c.lineTo(x - 6.5 * k, y - 8.8 * k); c.closePath(); c.fill();
+    c.fillStyle = '#3A2A20'; c.fillRect(x - 2 * k, y - 4.6 * k, 4 * k, 5.6 * k);
+    c.fillStyle = '#F6D48C'; c.fillRect(x - 5.6 * k, y - 6 * k, 2.4 * k, 2.2 * k); c.fillRect(x + 3.2 * k, y - 6 * k, 2.4 * k, 2.2 * k);
+    c.fillStyle = '#7C8692'; c.fillRect(x + 8 * k, y - 2 * k, 4 * k, 3 * k); c.fillRect(x + 8.6 * k, y - 3.6 * k, 2.8 * k, 1.6 * k);
+  },
+  drawHut(x, y) {
+    const c = this.c, k = this.k, t = this.t;
+    ell(c, x, y + 1 * k, 9.5 * k, 2 * k, 'rgba(30,50,70,.15)');
+    c.fillStyle = '#F7FAFC'; c.beginPath(); c.arc(x, y + 1 * k, 8.4 * k, Math.PI, 0); c.closePath(); c.fill();
+    c.strokeStyle = '#A9C0D1'; c.lineWidth = 0.5 * k;
+    for (let i = 1; i <= 3; i++) { c.beginPath(); c.arc(x, y + 1 * k, 8.4 * k * i / 3.2, Math.PI, 0); c.stroke(); }
+    c.beginPath(); c.arc(x, y + 1 * k, 8.4 * k, Math.PI, 0); c.closePath(); c.stroke();
+    c.fillStyle = '#2E3440'; c.beginPath(); c.arc(x, y + 1 * k, 2.6 * k, Math.PI, 0); c.fill();
+    const lg = c.createRadialGradient(x + 9 * k, y - 4 * k, 0, x + 9 * k, y - 4 * k, 5 * k); lg.addColorStop(0, `rgba(255,214,120,${0.7 + Math.sin(t * 3) * 0.1})`); lg.addColorStop(1, 'rgba(255,214,120,0)');
+    c.fillStyle = lg; c.beginPath(); c.arc(x + 9 * k, y - 4 * k, 5 * k, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#6B4A2E'; c.fillRect(x + 8.7 * k, y - 4 * k, 0.6 * k, 5 * k); ell(c, x + 9 * k, y - 4.4 * k, 1 * k, 1.2 * k, '#F6C04A');
+  },
+  drawPost(x, y) {
+    const c = this.c, k = this.k, t = this.t;
+    c.fillStyle = '#6B4A2E'; c.fillRect(x - 0.4 * k, y - 12 * k, 0.8 * k, 12 * k);
+    c.fillStyle = '#DD5B1A'; c.beginPath(); c.moveTo(x + 0.4 * k, y - 12 * k); c.quadraticCurveTo(x + 4 * k, y - 11 * k + Math.sin(t * 4) * k, x + 7 * k, y - 10 * k); c.lineTo(x + 0.4 * k, y - 8 * k); c.closePath(); c.fill();
+    c.fillStyle = '#9C6B44'; rr(c, x + 2 * k, y - 2.6 * k, 8 * k, 2 * k, 0.6 * k); c.fill();
+    c.strokeStyle = '#5B6573'; c.lineWidth = 0.5 * k; c.beginPath(); c.moveTo(x + 1.4 * k, y + 0.2 * k); c.lineTo(x + 10.6 * k, y + 0.2 * k); c.quadraticCurveTo(x + 12 * k, y + 0.2 * k, x + 11.4 * k, y - 1.4 * k); c.stroke();
+  },
+  drawPlot(x, y, name) {
+    const c = this.c, k = this.k;
+    c.setLineDash([2 * k, 1.6 * k]); c.strokeStyle = '#AFC2D1'; c.lineWidth = 0.5 * k; c.beginPath(); c.ellipse(x, y - 1 * k, 8 * k, 3 * k, 0, 0, Math.PI * 2); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#8A6A4E'; c.fillRect(x - 0.3 * k, y - 7 * k, 0.6 * k, 6 * k); c.fillStyle = '#C9A57E'; rr(c, x - 3.6 * k, y - 8.4 * k, 7.2 * k, 2.6 * k, 0.4 * k); c.fill();
+  },
+  drawShed(x, y, col, steam) {
+    const c = this.c, k = this.k, t = this.t;
+    ell(c, x, y + 0.6 * k, 5 * k, 1.3 * k, 'rgba(30,50,70,.14)');
+    c.fillStyle = col; c.fillRect(x - 4 * k, y - 5 * k, 8 * k, 5.4 * k);
+    c.fillStyle = '#FFFFFF'; rr(c, x - 4.8 * k, y - 6.6 * k, 9.6 * k, 2 * k, 0.8 * k); c.fill();
+    c.fillStyle = '#3A2A20'; c.fillRect(x - 1.2 * k, y - 3 * k, 2.4 * k, 3.4 * k);
+    if (steam) for (let i = 0; i < 2; i++) { const p = (t * 0.4 + i / 2) % 1; ell(c, x + 2.4 * k, y - 7 * k - p * 7 * k, (0.8 + p * 1.6) * k, (0.8 + p * 1.6) * k, `rgba(255,255,255,${0.7 * (1 - p)})`); }
+  },
+  drawCabin(x, y) {
+    const c = this.c, k = this.k;
+    ell(c, x, y + 0.6 * k, 8 * k, 1.5 * k, 'rgba(30,50,70,.14)');
+    c.fillStyle = '#7A5A40'; c.fillRect(x - 7 * k, y - 5 * k, 14 * k, 5.4 * k);
+    c.fillStyle = '#5E4430'; for (let i = 0; i < 3; i++) c.fillRect(x - 7 * k, y - 4.4 * k + i * 1.7 * k, 14 * k, 0.4 * k);
+    c.fillStyle = '#FFFFFF'; rr(c, x - 7.8 * k, y - 6.8 * k, 15.6 * k, 2.2 * k, 1 * k); c.fill();
+    c.fillStyle = '#F6D48C'; c.fillRect(x - 4.6 * k, y - 3.6 * k, 1.8 * k, 1.6 * k); c.fillRect(x + 2.8 * k, y - 3.6 * k, 1.8 * k, 1.6 * k);
+  },
+  drawSprings(x, y) {
+    const c = this.c, k = this.k, t = this.t;
+    ell(c, x, y, 7 * k, 2.6 * k, '#C9D6E0'); ell(c, x, y, 6 * k, 2 * k, '#7FC1DF');
+    for (let i = 0; i < 3; i++) { const p = (t * 0.35 + i / 3) % 1; ell(c, x - 3 * k + i * 3 * k, y - 2 * k - p * 7 * k, (0.8 + p * 1.8) * k, (0.8 + p * 1.8) * k, `rgba(255,255,255,${0.6 * (1 - p)})`); }
+  },
+  drawTower(x, y) {
+    const c = this.c, k = this.k;
+    c.strokeStyle = '#6B4A2E'; c.lineWidth = 0.7 * k; c.beginPath(); c.moveTo(x - 2.6 * k, y); c.lineTo(x - 1.4 * k, y - 13 * k); c.moveTo(x + 2.6 * k, y); c.lineTo(x + 1.4 * k, y - 13 * k); c.moveTo(x - 2.2 * k, y - 4 * k); c.lineTo(x + 2.2 * k, y - 8 * k); c.stroke();
+    c.fillStyle = '#8B5E3C'; c.fillRect(x - 2.6 * k, y - 15 * k, 5.2 * k, 2.4 * k); c.fillStyle = '#FFFFFF'; rr(c, x - 3 * k, y - 16.4 * k, 6 * k, 1.6 * k, 0.6 * k); c.fill();
+  },
+  drawLights(fx, fy, tier, t) {
+    const c = this.c, k = this.k, n = tier >= 3 ? 16 : 10, rx = this.W * 0.2, ry = this.H * 0.16;
+    const cols = ['#F6C04A', '#E2483C', '#7FC1DF', '#8BC48A'];
+    c.strokeStyle = 'rgba(60,70,80,.35)'; c.lineWidth = 0.4 * k; c.beginPath(); c.ellipse(fx, fy - 3 * k, rx, ry, 0, Math.PI * 0.05, Math.PI * 0.95); c.stroke();
+    for (let i = 0; i <= n; i++) { const a = Math.PI * (0.05 + 0.9 * i / n), x = fx + Math.cos(a) * rx, y = fy - 3 * k + Math.sin(a) * ry; const on = 0.6 + 0.4 * Math.sin(t * 3 + i); ell(c, x, y, 0.9 * k, 0.9 * k, cols[i % 4]); c.globalAlpha = 0.25 * on; ell(c, x, y, 2.2 * k, 2.2 * k, cols[i % 4]); c.globalAlpha = 1; }
+  },
+};
+
+// ===== LOOP =====
+function boot(data) {
+  S = (data && data.state) || load();
+  const fresh = !S;
+  if (!S) S = newState();
+  if (data && data.ui) { ui.tab = data.ui.tab || 'city'; ui.seg = data.ui.seg || 'buildings'; ui.speed = data.ui.speed || 1; ui.log = data.ui.log || []; }
+  renderChips();
+  scene.init();
+  setTab(ui.tab);
+  if (!(data && data.state)) openSheet(fresh || S.t < 5 ? 'intro' : 'welcome');
+  window.claude?.hot?.snapshot?.(() => ({ state: S, ui: { tab: ui.tab, seg: ui.seg, speed: ui.speed, log: ui.log } }));
+  let last = performance.now();
+  const ev = [];
+  function frame(now) {
+    const rdt = Math.min(0.25, (now - last) / 1000); last = now;
+    const paused = ui.manualPause || ui.sheet || document.hidden;
+    if (!paused) {
+      let gdt = rdt * ui.speed;
+      while (gdt > 0) { const st = Math.min(0.5, gdt); gdt -= st; ev.length = 0; tick(S, st, ev); if (ev.length) handleEvents(ev); }
+    }
+    if (ui.tab === 'city') { scene.update(paused ? 0 : rdt); scene.draw(); }
+    ui.uiT -= rdt;
+    if (ui.uiT <= 0) {
+      ui.uiT = 0.2;
+      const r = rates(S);
+      updateHUD(r);
+      if (ui.tab === 'city') renderCity(r); else if (ui.tab === 'build') renderBuild(r); else if (ui.tab === 'jans') renderJans(r); else renderFound();
+      updateToast();
+    }
+    ui.saveT -= rdt;
+    if (ui.saveT <= 0 && !paused) { ui.saveT = 5; save(); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  window.addEventListener('pagehide', save);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+</script>
+
+</body></html>
