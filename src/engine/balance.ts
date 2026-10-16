@@ -11,6 +11,13 @@ export const MAX_ADVANCE_SECONDS = 1;
 /** Furnace level bands. Tier 1 = Furnace 1–3, Tier 2 = 4–6, Tier 3 = 7–10. [brief] */
 export const TIER_STARTS = [1, 4, 7] as const;
 
+// ---------- Saving ----------
+
+export const SAVE = {
+  /** Autosave to localStorage this often, besides every build/upgrade and when the app is hidden. [brief] */
+  autosaveSeconds: 30,
+} as const;
+
 // ---------- New winter ----------
 
 /** A winter starts empty: Meagan rescues the first Jan and gathers the first resources herself. [planned] */

@@ -1,5 +1,5 @@
 // The game's rules engine: owns state, runs the fixed tick, exposes player actions. No Phaser or DOM in here.
-import { BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, START, TICK_SECONDS } from './balance';
+import { BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, START, TICK_SECONDS, VARIANTS } from './balance';
 import { updateAttacks } from './combat';
 import {
   arrivalInterval,
@@ -23,7 +23,7 @@ import { MAP_BOUNDS, MEAGAN_START, SITES, siteIndexOf } from './map';
 import { updateMeagan } from './meagan';
 import { buildGrid, findPath, type NavGrid } from './pathfinding';
 import { seededRng, type Rng } from './rng';
-import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, Point, ResourceKey } from './types';
+import type { Assignment, BuildingKey, EngineEvent, GameState, GearKey, Jan, Point, ResourceKey, VariantKey } from './types';
 
 export function newWinterState(): GameState {
   const buildings = Object.fromEntries(
@@ -58,6 +58,8 @@ export function newWinterState(): GameState {
     longNightTier: 1,
     attack: { next: Infinity, warned: false, active: false, animals: [], guards: [], breached: false },
     burnRate: 0,
+    found: Object.fromEntries((Object.keys(VARIANTS) as VariantKey[]).map((v) => [v, 0])) as Record<VariantKey, number>,
+    stats: { rescued: 0 },
   };
 }
 
@@ -75,12 +77,27 @@ export class GameEngine {
   private accumulator = 0;
   private paused = false;
   private navGrid!: NavGrid;
+  private loads = 0;
 
   constructor(opts: EngineOptions = {}) {
     this.state = opts.state ?? newWinterState();
     this.rng = opts.rng ?? seededRng(opts.seed ?? Date.now());
     this.ctx = { rng: this.rng, emit: (e) => this.events.push(e) };
     this.rebuildNav();
+  }
+
+  /** Replace the whole state (import, new winter). The renderer watches loadCount to rebuild its sprites. */
+  load(state: GameState): void {
+    this.state = state;
+    this.events = [];
+    this.accumulator = 0;
+    this.loads++;
+    this.rebuildNav();
+  }
+
+  /** Bumped on every load(). */
+  get loadCount(): number {
+    return this.loads;
   }
 
   /** Walkability grid for the current buildings (read-only; the renderer draws it in debug mode). */

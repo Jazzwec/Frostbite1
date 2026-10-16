@@ -5,7 +5,7 @@ import { buildingCost, carryLimit, heatCap } from '../engine/economy';
 import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
 import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
-import { devFlags, engine } from '../game/runtime';
+import { devFlags, engine, saveNow } from '../game/runtime';
 import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
 import { JOB_LABELS, formatCost } from '../ui/format';
@@ -39,12 +39,19 @@ export class CityScene extends Phaser.Scene {
   private readonly jans = new Map<number, JanSprite>();
   /** Where a just-thawed Jan starts walking from (map units), keyed by Jan id. */
   private readonly thawedAt = new Map<number, Point>();
+  /** engine.loadCount when this scene was built; a different value means a save was loaded. */
+  private builtFor = 0;
 
   constructor() {
     super('City');
   }
 
   create(): void {
+    // create() runs again on restart, so start from empty sprite maps.
+    this.frozen.clear();
+    this.jans.clear();
+    this.thawedAt.clear();
+    this.builtFor = engine.loadCount;
     this.makeTextures();
     this.drawBackground();
     this.drawGatherSpots();
@@ -66,6 +73,10 @@ export class CityScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (engine.loadCount !== this.builtFor) {
+      this.scene.restart(); // a different city was loaded: rebuild every sprite from the new state
+      return;
+    }
     engine.advance(delta);
     for (const e of engine.drainEvents()) this.onEvent(e);
 
@@ -106,7 +117,9 @@ export class CityScene extends Phaser.Scene {
     else if (e.type === 'upgradeStarted') {
       const cost = buildingCost(e.building, engine.state.buildings[e.building]);
       this.floater(this.sites[e.site].top, `Bring ${formatCost(cost)}`);
+      saveNow();
     } else if (e.type === 'buildingUpgraded') {
+      saveNow();
       const name = buildingName(e.building);
       this.floater(this.sites[e.site].top, e.level === 1 ? `${name} built!` : `${name} Lv ${e.level}!`);
     }
@@ -212,6 +225,7 @@ export class CityScene extends Phaser.Scene {
 
   /** Small runtime textures for particles, so there are no image assets yet. */
   private makeTextures(): void {
+    if (this.textures.exists('flake')) return; // already made before a restart
     const g = this.make.graphics({}, false);
     g.fillStyle(0xffffff, 1).fillCircle(8, 8, 8);
     g.generateTexture('flake', 16, 16);

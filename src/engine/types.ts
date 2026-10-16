@@ -151,6 +151,9 @@ export interface GameState {
   attack: AttackState;
   /** Last second's Wood burned per second, for display. */
   burnRate: number;
+  /** Jans met per variant this winter (returning Jans don't count again), for the Collection screen. */
+  found: Record<VariantKey, number>;
+  stats: { rescued: number };
 }
 
 export type EngineEvent =

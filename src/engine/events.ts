@@ -126,6 +126,10 @@ export function rescueArrival(s: GameState, arrivalId: number, ctx: TickContext)
   const [w] = s.waiting.splice(i, 1);
   const jan: Jan = { id: w.id, variant: w.variant ?? pickVariant(s, ctx.rng), job: neediestJob(s), hasKit: false };
   s.jans.push(jan);
+  if (!w.returning) {
+    s.found[jan.variant]++;
+    s.stats.rescued++;
+  }
   ctx.emit({ type: 'rescued', jan, returning: w.returning, from: { x: w.x, y: w.y } });
   if (jan.variant === 'keys' && !w.returning) {
     const bonus = keysBonus(s, ctx.rng);
