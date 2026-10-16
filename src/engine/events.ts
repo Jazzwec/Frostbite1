@@ -28,6 +28,7 @@ export function updateBlizzard(s: GameState, ctx: TickContext): void {
   if (bz.active) {
     if (s.t >= bz.end) {
       bz.active = false;
+      s.stats.blizzardsSurvived++;
       ctx.emit({ type: 'blizzardEnd', long: bz.long });
       scheduleBlizzard(s, ctx.rng);
     }

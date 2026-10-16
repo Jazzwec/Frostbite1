@@ -58,6 +58,7 @@ function startAttack(s: GameState, ctx: TickContext): void {
 
 function endAttack(s: GameState, ctx: TickContext): void {
   const repelled = !s.attack.breached;
+  if (repelled) s.stats.attacksRepelled++;
   s.attack.active = false;
   s.attack.animals = [];
   s.attack.guards = [];

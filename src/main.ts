@@ -6,6 +6,7 @@ import { CSS, GAME_HEIGHT, GAME_WIDTH } from './theme';
 import { buildScreen } from './ui/overlay/BuildScreen';
 import { collectionScreen } from './ui/overlay/CollectionScreen';
 import { jansScreen } from './ui/overlay/JansScreen';
+import { MilestoneCards } from './ui/overlay/MilestoneCards';
 import { settingsScreen } from './ui/overlay/SettingsScreen';
 import { Shell } from './ui/overlay/Shell';
 
@@ -29,3 +30,5 @@ new Shell(game, {
   collection: collectionScreen,
   settings: settingsScreen,
 });
+
+new MilestoneCards(document.getElementById('ui')!);

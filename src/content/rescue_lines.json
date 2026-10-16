@@ -1,0 +1,72 @@
+{
+  "main": [
+    { "text": "Is it Tuesday? It feels like a Tuesday.", "weight": 1 },
+    { "text": "Thank you, Meagan. Truly.", "weight": 3 },
+    { "text": "I can feel my toes again!", "weight": 3 },
+    { "text": "Was I frozen long?", "weight": 2 },
+    { "text": "Is that a fire? A real fire?", "weight": 2 },
+    { "text": "I'll work. Point me at something.", "weight": 2 },
+    { "text": "You came back for me.", "weight": 2 },
+    { "text": "Warm. Warm is good.", "weight": 3 },
+    { "text": "Did I miss lunch?", "weight": 2 },
+    { "text": "I dreamt of soup.", "weight": 2 },
+    { "text": "Hello! I'm Jan.", "weight": 3 },
+    { "text": "Another Jan? Excellent.", "weight": 1 },
+    { "text": "I owe you one, Meagan.", "weight": 2 },
+    { "text": "My beard is mostly ice.", "weight": 2 },
+    { "text": "That was a very long nap.", "weight": 2 },
+    { "text": "Is everyone here called Jan?", "weight": 1 },
+    { "text": "I promise I'm useful.", "weight": 2 },
+    { "text": "Brrr. Right. Where do you need me?", "weight": 3 },
+    { "text": "Meagan! You found me!", "weight": 2 },
+    { "text": "I'd hug you but I'm still damp.", "weight": 1 },
+    { "text": "Snow is overrated.", "weight": 2 },
+    { "text": "Can I sit by the furnace? Just for a minute?", "weight": 2 },
+    { "text": "I can chop. I can probably chop.", "weight": 2 },
+    { "text": "I followed the smoke.", "weight": 2 },
+    { "text": "Is there tea?", "weight": 2 },
+    { "text": "You have very warm hands.", "weight": 1 },
+    { "text": "I'm never going outside again. After this shift.", "weight": 1 },
+    { "text": "Count me in.", "weight": 3 },
+    { "text": "Best. Rescue. Ever.", "weight": 1 },
+    { "text": "I think my eyebrows froze off.", "weight": 1 },
+    { "text": "Thawed and ready.", "weight": 3 },
+    { "text": "The cold got bored of me.", "weight": 1 },
+    { "text": "You're the one they talk about.", "weight": 1 },
+    { "text": "I'll pull my weight. Promise.", "weight": 2 },
+    { "text": "Ah, civilisation.", "weight": 2 },
+    { "text": "Did a wolf eat my mittens?", "weight": 1 },
+    { "text": "I heard there was a town here.", "weight": 2 },
+    { "text": "Oh, that's the good kind of warm.", "weight": 2 },
+    { "text": "Reporting for duty, Meagan.", "weight": 3 },
+    { "text": "Somebody tell my feet we made it.", "weight": 1 }
+  ],
+  "variants": {
+    "chef": [
+      { "text": "Who's in charge of the soup?", "weight": 1 },
+      { "text": "I brought my own ladle.", "weight": 1 },
+      { "text": "This town needs seasoning.", "weight": 1 },
+      { "text": "Stew. Tonight. Trust me.", "weight": 1 }
+    ],
+    "sleepy": [
+      { "text": "Mm? Oh. Hello. Is it morning?", "weight": 1 },
+      { "text": "I'll help. After a little lie-down.", "weight": 1 },
+      { "text": "The ice was quite comfy, actually.", "weight": 1 }
+    ],
+    "spreadsheet": [
+      { "text": "I've been counting snowflakes. Want the total?", "weight": 1 },
+      { "text": "Where do you keep your records?", "weight": 1 },
+      { "text": "I'll need a pencil. And a hut.", "weight": 1 }
+    ],
+    "keys": [
+      { "text": "Has anyone seen my keys?", "weight": 1 },
+      { "text": "Wait, I found something! Not my keys though.", "weight": 1 },
+      { "text": "I definitely had them a minute ago.", "weight": 1 }
+    ],
+    "lumberjack": [
+      { "text": "Which way to the trees?", "weight": 1 },
+      { "text": "I can hear the forest calling.", "weight": 1 },
+      { "text": "Give me an axe and an hour.", "weight": 1 }
+    ]
+  }
+}

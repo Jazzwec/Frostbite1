@@ -324,3 +324,44 @@
 .job-row.done b {
   color: var(--slate);
 }
+
+/* ---------- Pop-up cards (milestones, welcome back) ---------- */
+
+.card-pop {
+  position: absolute;
+  left: calc(var(--u) * 60);
+  right: calc(var(--u) * 60);
+  top: calc(var(--u) * 320);
+  pointer-events: auto;
+  padding: calc(var(--u) * 32);
+  background: var(--ice);
+  border: calc(var(--u) * 6) solid var(--ink);
+  border-radius: calc(var(--u) * 32);
+  box-shadow: 0 calc(var(--u) * 12) 0 rgba(26, 41, 56, 0.25);
+  text-align: center;
+  animation: pop-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+  z-index: 5;
+}
+.card-pop b {
+  display: block;
+  margin: calc(var(--u) * 8) 0;
+  font-size: calc(var(--u) * 42);
+}
+.card-pop p {
+  margin: 0 0 calc(var(--u) * 16);
+  line-height: 1.35;
+}
+.card-kicker {
+  color: var(--ember);
+  font-size: calc(var(--u) * 26);
+}
+@keyframes pop-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

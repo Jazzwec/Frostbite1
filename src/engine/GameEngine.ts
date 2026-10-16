@@ -63,7 +63,8 @@ export function newWinterState(): GameState {
     attack: { next: Infinity, warned: false, active: false, animals: [], guards: [], breached: false },
     burnRate: 0,
     found: Object.fromEntries((Object.keys(VARIANTS) as VariantKey[]).map((v) => [v, 0])) as Record<VariantKey, number>,
-    stats: { rescued: 0 },
+    stats: { rescued: 0, blizzardsSurvived: 0, attacksRepelled: 0 },
+    milestones: [],
     research: [],
     autoAssign: false,
     autoAssignTimer: 0,
@@ -262,6 +263,13 @@ export class GameEngine {
 
   costOf(key: BuildingKey): Cost {
     return nextCost(this.state, key);
+  }
+
+  /** Record that a milestone's card was shown, so it never fires again. */
+  markMilestone(id: string): boolean {
+    if (this.state.milestones.includes(id)) return false;
+    this.state.milestones.push(id);
+    return true;
   }
 
   /** Learn a Research node with Knowledge. */

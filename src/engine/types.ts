@@ -153,7 +153,9 @@ export interface GameState {
   burnRate: number;
   /** Jans met per variant this winter (returning Jans don't count again), for the Collection screen. */
   found: Record<VariantKey, number>;
-  stats: { rescued: number };
+  stats: { rescued: number; blizzardsSurvived: number; attacksRepelled: number };
+  /** Ids of milestones already shown. */
+  milestones: string[];
   /** Research nodes bought this winter (keys of RESEARCH.nodes). */
   research: string[];
   /** Auto-assign switch on the Jans screen, and time since its last rebalance. */

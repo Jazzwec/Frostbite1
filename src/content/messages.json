@@ -1,0 +1,21 @@
+{
+  "blizzardWarnings": [
+    "The sky's turned grey and heavy. A blizzard is coming.",
+    "The Jans can smell snow on the wind. Stock up on Wood.",
+    "Storm clouds over the hills. Keep the furnace fed.",
+    "The birds have gone quiet. Something big is blowing in.",
+    "A blizzard is on its way. Everyone near the fire!"
+  ],
+  "longNightWarning": "A Long Night is coming: a blizzard that won't let up for a long while. Stock everything.",
+  "blizzardStart": "The blizzard hits! The furnace is burning fast.",
+  "longNightStart": "The Long Night has begun. Hold on.",
+  "blizzardEnd": "The wind drops. The blizzard has passed.",
+  "thaw": [
+    "Something drips from the roof of the furnace.",
+    "Then another drop. Then a puddle. The Jans gather round, staring.",
+    "Somewhere over the hills, the snow is turning to slush.",
+    "The thaw is here, Meagan. You kept everyone warm the whole winter."
+  ],
+  "firstPrestige": "A new winter, but not a new Meagan. The Veterans remember everything, and the fire lights faster this time.",
+  "welcomeBack": "Nothing burned while you were gone."
+}
