@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { buildingName, chatterLine, rescueLine } from '../content';
 import { MEAGAN } from '../engine/balance';
-import { bagTotal, carryLimit, caravanWait, heatCap, nextCost } from '../engine/economy';
+import { bagTotal, carryLimit, caravanWait, heatCap, nextCost, tierOf } from '../engine/economy';
 import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
 import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
@@ -33,6 +33,14 @@ const CHATTER_MAX_MS = 30_000;
 /** A pick-up or delivery plink once this much has moved in or out of her bag, at most this often. */
 const BAG_SOUND_UNITS = 2;
 const BAG_SOUND_GAP_MS = 120;
+/** Furnace looks by heat: 0 = cold, then up to 4 = roaring (fire size, glow size, ember rate in ms). */
+const HEAT_STAGES = [
+  { fire: 0, glow: 0, embers: 0 },
+  { fire: 0.45, glow: 0.55, embers: 700 },
+  { fire: 0.65, glow: 0.75, embers: 450 },
+  { fire: 0.85, glow: 0.9, embers: 300 },
+  { fire: 1, glow: 1, embers: 200 },
+];
 /** Jans sharing a job stand in a little group around its work spot. */
 const CROWD = { perRow: 4, dx: 26, dy: 24 } as const;
 
@@ -45,6 +53,12 @@ export class CityScene extends Phaser.Scene {
   private sites: SiteView[] = [];
   private picker!: BuildPicker;
   private debug!: Phaser.GameObjects.Graphics;
+  private fireHolder!: Phaser.GameObjects.Container;
+  private glow!: Phaser.GameObjects.Ellipse;
+  private embers!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private heatStage = -1;
+  private tierShown = 0;
+  private decor: Phaser.GameObjects.GameObject[] = [];
   private readonly frozen = new Map<number, JanSprite>();
   private readonly jans = new Map<number, JanSprite>();
   private readonly animals = new Map<number, AnimalSprite>();
@@ -73,6 +87,9 @@ export class CityScene extends Phaser.Scene {
     this.lastBag = bagTotal(engine.state);
     this.bagFlow = 0;
     this.builtFor = engine.loadCount;
+    this.heatStage = -1;
+    this.tierShown = 0;
+    this.decor = [];
     this.makeTextures();
     this.drawBackground();
     this.drawGatherSpots();
@@ -163,7 +180,65 @@ export class CityScene extends Phaser.Scene {
   }
 
   private syncHeat(): void {
-    this.heatBar.setValue(engine.state.heat / heatCap(engine.state));
+    const s = engine.state;
+    const f = s.heat / heatCap(s);
+    this.heatBar.setValue(f);
+    const stage = s.heat <= 0 ? 0 : Math.min(HEAT_STAGES.length - 1, 1 + Math.floor(f * (HEAT_STAGES.length - 1)));
+    if (stage !== this.heatStage) {
+      this.heatStage = stage;
+      const look = HEAT_STAGES[stage];
+      this.fireHolder.setScale(look.fire).setVisible(look.fire > 0);
+      this.glow.setScale(look.glow).setVisible(look.glow > 0);
+      if (look.embers > 0) {
+        this.embers.frequency = look.embers;
+        if (!this.embers.emitting) this.embers.start();
+      } else this.embers.stop();
+    }
+    const tier = tierOf(s.buildings.furnace);
+    if (tier !== this.tierShown) this.drawDecor(tier);
+  }
+
+  /** Each tier dresses the town up a little: Tier 2 string lights, Tier 3 flags, lanterns and deeper drifts. */
+  private drawDecor(tier: number): void {
+    this.tierShown = tier;
+    for (const o of this.decor) o.destroy();
+    this.decor = [];
+    const bulbs = [COLOURS.emberGlow, COLOURS.frostSoft, COLOURS.ember];
+    if (tier >= 2) {
+      // String lights under the furnace's snow cap, left of the chimney.
+      const lights = this.add.graphics().setDepth(FURNACE_Y + 1);
+      const y0 = FURNACE_Y - 300 + 34;
+      const points: Point[] = [];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        points.push({ x: FURNACE_X - 150 + t * 190, y: y0 + Math.sin(t * Math.PI) * 26 });
+      }
+      lights.lineStyle(3, COLOURS.ink, 0.8).strokePoints(points);
+      points.forEach((p, i) => lights.fillStyle(bulbs[i % bulbs.length], 1).fillCircle(p.x, p.y + 5, 6));
+      this.decor.push(lights);
+    }
+    if (tier >= 3) {
+      // Flags on the furnace's top corners and lanterns either side of its door.
+      const capTop = FURNACE_Y - 300 - 22;
+      const flags = this.add.graphics().setDepth(FURNACE_Y + 1);
+      for (const fx of [FURNACE_X - 140, FURNACE_X + 140]) {
+        flags.fillStyle(COLOURS.slate, 1).fillRect(fx - 3, capTop - 80, 6, 80);
+        flags.fillStyle(COLOURS.ember, 1).fillTriangle(fx + 3, capTop - 80, fx + 46, capTop - 67, fx + 3, capTop - 54);
+        flags.lineStyle(3, COLOURS.ink, 1).strokeTriangle(fx + 3, capTop - 80, fx + 46, capTop - 67, fx + 3, capTop - 54);
+      }
+      this.decor.push(flags);
+      for (const dx of [-120, 120]) {
+        const p = toScreen({ x: dx, y: 40 });
+        const lantern = this.add.graphics().setDepth(p.y);
+        lantern.fillStyle(COLOURS.ink, 1).fillRect(p.x - 3, p.y - 70, 6, 70);
+        lantern.fillStyle(COLOURS.emberGlow, 1).fillRoundedRect(p.x - 12, p.y - 96, 24, 28, 6);
+        lantern.lineStyle(3, COLOURS.ink, 1).strokeRoundedRect(p.x - 12, p.y - 96, 24, 28, 6);
+        this.decor.push(lantern);
+      }
+      const drifts = this.add.graphics().setDepth(DEPTH.background + 2);
+      drifts.fillStyle(COLOURS.ice, 1).fillEllipse(70, GAME_HEIGHT - 150, 260, 90).fillEllipse(GAME_WIDTH - 60, GAME_HEIGHT - 170, 280, 100);
+      this.decor.push(drifts);
+    }
   }
 
   private tapMarker(at: Point): void {
@@ -423,8 +498,8 @@ export class CityScene extends Phaser.Scene {
     const outline = COLOURS.ink;
 
     // Warm glow pooled on the snow around the furnace.
-    const pool = this.add.ellipse(x, base, 520, 130, COLOURS.emberGlow, 0.25).setDepth(DEPTH.background + 1);
-    this.tweens.add({ targets: pool, alpha: 0.12, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.glow = this.add.ellipse(x, base, 520, 130, COLOURS.emberGlow, 0.25).setDepth(DEPTH.background + 1);
+    this.tweens.add({ targets: this.glow, alpha: 0.12, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     const g = this.add.graphics().setDepth(base);
     // Chimney.
@@ -450,10 +525,11 @@ export class CityScene extends Phaser.Scene {
     g.fillCircle(x, dTop + dw / 2, dw / 2);
 
     // Flickering fire inside the door.
-    const fire = this.add.graphics().setDepth(base);
+    // Its holder scales with heat (syncHeat); the fire itself flickers.
+    const fire = this.add.graphics();
     fire.fillStyle(COLOURS.ember, 1).fillEllipse(0, 0, 120, 120);
     fire.fillStyle(COLOURS.emberGlow, 1).fillEllipse(0, 10, 70, 80);
-    fire.setPosition(x, base - 80);
+    this.fireHolder = this.add.container(x, base - 80, [fire]).setDepth(base);
     this.tweens.add({
       targets: fire,
       scaleX: 0.9,
@@ -477,8 +553,8 @@ export class CityScene extends Phaser.Scene {
     frame.lineStyle(6, outline, 0.8);
     for (const gx of [-40, 0, 40]) frame.lineBetween(x + gx, dTop + 30, x + gx, base - 30);
 
-    // Embers drifting out of the chimney.
-    this.add
+    // Embers drifting out of the chimney, faster the hotter the fire.
+    this.embers = this.add
       .particles(x + 85, top - 170, 'ember', {
         speedY: { min: -120, max: -60 },
         speedX: { min: -30, max: 30 },

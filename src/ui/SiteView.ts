@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { buildingName } from '../content';
 import { BUILDINGS } from '../engine/balance';
-import { fuelCap, nextCost } from '../engine/economy';
+import { fuelCap, nextCost, tierOf } from '../engine/economy';
 import { SITES, pileSiteIndex } from '../engine/map';
 import type { BuildingKey, GameState, Point, StoredResource } from '../engine/types';
 import { ORIGIN, toScreen } from '../scenes/coords';
@@ -83,7 +83,8 @@ export class SiteView extends Phaser.GameObjects.Container {
     );
     const fuel = this.isFurnace ? `Fuel ${formatNumber(s.fuel)}/${formatNumber(fuelCap(s))}` : '';
     const progress = PILED.map((r) => Math.floor(site.progress[r] ?? 0));
-    const sig = JSON.stringify([key, level, site.upgrading, piles, fuel, progress]);
+    const tier = tierOf(s.buildings.furnace);
+    const sig = JSON.stringify([key, level, site.upgrading, piles, fuel, progress, tier]);
     if (sig === this.sig) return;
     this.sig = sig;
 
@@ -91,7 +92,7 @@ export class SiteView extends Phaser.GameObjects.Container {
     if (this.isFurnace) this.label.setText([`Furnace Lv ${level}`, fuel, ...piles].join('\n'));
     else if (!key) this.drawPlot();
     else if (level === 0) this.drawConstruction(key);
-    else this.drawBuilding(key, level, piles);
+    else this.drawBuilding(key, level, piles, tier);
 
     this.drawProgress(s, key, site.upgrading, site.progress);
   }
@@ -115,7 +116,7 @@ export class SiteView extends Phaser.GameObjects.Container {
     this.label.setText(buildingName(key)).setColor(CSS.ink).setY(-BODY_H / 2 - 10);
   }
 
-  private drawBuilding(key: BuildingKey, level: number, piles: string[]): void {
+  private drawBuilding(key: BuildingKey, level: number, piles: string[], tier: number): void {
     const w = this.siteW;
     const g = this.g;
     const roof = ROOFS[Object.keys(BUILDINGS).indexOf(key) % ROOFS.length];
@@ -124,6 +125,11 @@ export class SiteView extends Phaser.GameObjects.Container {
     g.fillStyle(roof, 1).fillTriangle(-w / 2 - 10, -BODY_H + 6, 0, -BODY_H - ROOF_H, w / 2 + 10, -BODY_H + 6);
     g.lineStyle(5, COLOURS.ink, 1).strokeTriangle(-w / 2 - 10, -BODY_H + 6, 0, -BODY_H - ROOF_H, w / 2 + 10, -BODY_H + 6);
     g.fillStyle(COLOURS.ice, 1).fillTriangle(-24, -BODY_H - ROOF_H + 24, 0, -BODY_H - ROOF_H, 24, -BODY_H - ROOF_H + 24);
+    // From Tier 2 the windows glow.
+    if (tier >= 2) {
+      g.fillStyle(COLOURS.emberGlow, 0.95).fillRect(-w / 2 + 10, -28, 18, 16).fillRect(w / 2 - 28, -28, 18, 16);
+      g.lineStyle(3, COLOURS.ink, 1).strokeRect(-w / 2 + 10, -28, 18, 16).strokeRect(w / 2 - 28, -28, 18, 16);
+    }
     this.label.setText([buildingName(key), `Lv ${level}`, ...piles].join('\n')).setColor(CSS.ice).setY(-BODY_H / 2);
   }
 
