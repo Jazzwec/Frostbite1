@@ -1,6 +1,6 @@
 // Timed pressure and arrivals: blizzards, Long Nights, Jan arrivals, caravans, scavenging, heat-zero departures.
 import { ARRIVALS, BLIZZARD, BUILDINGS, CARAVAN, HEAT, KEYS_BONUS, SCAVENGE, VARIANTS } from './balance';
-import { caps, caravanGap, grossRates, isUnlocked, janCap, janJobMult, neediestJob, scavengeBurst, scavengeInterval, tierOf } from './economy';
+import { caps, caravanGap, caravanWait, grossRates, isUnlocked, janCap, janJobMult, neediestJob, scavengeBurst, scavengeInterval, tierOf } from './economy';
 import { ARRIVAL_SPOTS, CARAVAN_SPOTS } from './map';
 import { between, intBetween, pickWeighted, type Rng } from './rng';
 import type { BuildingKey, EngineEvent, GameState, Jan, Point, ResourceKey, StoredResource, VariantKey } from './types';
@@ -79,7 +79,7 @@ function addArrival(s: GameState, variant: VariantKey | null, fromCaravan: boole
     variant,
     fromCaravan,
     returning,
-    leavesAt: fromCaravan ? s.t + CARAVAN.waitSeconds : null,
+    leavesAt: fromCaravan ? s.t + caravanWait(s) : null,
   });
   return id;
 }

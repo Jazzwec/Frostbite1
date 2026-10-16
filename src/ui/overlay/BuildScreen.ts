@@ -1,24 +1,42 @@
 // Build tab: every building with its level, effect, next cost and delivery progress, and a Go button that sends
-// Meagan there. Building itself still happens on the map by carrying.
-import { buildingEffect, buildingName } from '../../content';
-import { BUILDINGS, GEAR } from '../../engine/balance';
-import { buildingCost, canAfford, gearCost, isUnlocked, kitCost } from '../../engine/economy';
+// Meagan there (building itself happens on the map by carrying). A switch at the top shows the Research tree.
+import { buildingEffect, buildingName, researchDescription, researchName } from '../../content';
+import { BUILDINGS, GEAR, RESEARCH, type ResearchKey } from '../../engine/balance';
+import { canAfford, gearCost, isUnlocked, kitCost, nextCost, researchCost, type Cost } from '../../engine/economy';
 import { siteIndexOf } from '../../engine/map';
 import type { BuildingKey, GearKey, StoredResource } from '../../engine/types';
 import { engine } from '../../game/runtime';
 import { RESOURCE_LABELS, formatCost, formatNumber } from '../format';
-import { h } from './dom';
+import { fill, h } from './dom';
 import type { Screen } from './Shell';
 
 type Group = 'placed' | 'buildable' | 'locked';
 const GROUP_ORDER: Group[] = ['placed', 'buildable', 'locked'];
+type Mode = 'buildings' | 'research';
 
 export function buildScreen(close: () => void): Screen {
+  let mode: Mode = 'buildings';
+  const tabs = h('div', { class: 'segmented' });
   const body = h('div');
-  const el = h('section', {}, h('h1', {}, 'Build'), body);
+  const el = h('section', {}, h('h1', {}, 'Build'), tabs, body);
   let sig = '';
 
+  function setMode(m: Mode): void {
+    mode = m;
+    sig = '';
+    refresh();
+  }
+
   function refresh(): void {
+    tabs.replaceChildren(
+      h('button', { class: `seg ${mode === 'buildings' ? 'on' : ''}`, onclick: () => setMode('buildings') }, 'Buildings'),
+      h('button', { class: `seg ${mode === 'research' ? 'on' : ''}`, onclick: () => setMode('research') }, 'Research'),
+    );
+    if (mode === 'buildings') renderBuildings();
+    else renderResearch();
+  }
+
+  function renderBuildings(): void {
     const s = engine.state;
     const freePlot = engine.nearestFreePlot() >= 0;
     const rows = (Object.keys(BUILDINGS) as BuildingKey[]).map((key) => {
@@ -26,20 +44,20 @@ export function buildScreen(close: () => void): Screen {
       const group: Group = site >= 0 ? 'placed' : isUnlocked(s, key) ? 'buildable' : 'locked';
       const level = s.buildings[key];
       const maxed = level >= BUILDINGS[key].max;
+      const cost = nextCost(s, key);
       const progress = site >= 0 && s.sites[site].upgrading ? s.sites[site].progress : null;
-      return { key, site, group, level, maxed, progress };
+      return { key, site, group, level, maxed, cost, progress };
     });
     rows.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
     // Gear buttons depend on what's in the piles, so the Barracks adds them to the signature.
     const armoury = s.buildings.barracks > 0 ? [s.gear, s.resources, s.jans.filter((j) => j.job === 'guard').map((j) => j.hasKit)] : null;
-    const next = JSON.stringify([rows.map((r) => [r.key, r.group, r.level, r.progress && progressText(r.key, r.level, r.progress)]), freePlot, armoury]);
+    const next = JSON.stringify(['b', rows.map((r) => [r.key, r.group, r.level, r.cost, r.progress && progressText(r.cost, r.progress)]), freePlot, armoury]);
     if (next === sig) return;
     sig = next;
 
     body.replaceChildren(
       h('p', {}, 'Tap Go and Meagan heads there. Carry what it needs and it builds itself.'),
       ...rows.map((r) => {
-        const cost = buildingCost(r.key, r.level);
         let action: HTMLElement;
         if (r.group === 'locked') action = h('span', { class: 'hint' }, `Furnace Lv ${BUILDINGS[r.key].unlockFurnace}`);
         else if (r.maxed) action = h('span', { class: 'hint' }, 'Max level');
@@ -57,11 +75,51 @@ export function buildScreen(close: () => void): Screen {
             h('b', {}, buildingName(r.key)),
             h('div', { class: 'detail' }, status),
             h('div', { class: 'detail' }, buildingEffect(r.key)),
-            r.maxed ? null : h('div', { class: 'cost' }, r.group === 'placed' && r.level > 0 ? `Next level: ${formatCost(cost)}` : `Costs ${formatCost(cost)}`),
-            r.progress ? progressBar(r.key, r.level, r.progress) : null,
+            r.maxed ? null : h('div', { class: 'cost' }, r.group === 'placed' && r.level > 0 ? `Next level: ${formatCost(r.cost)}` : `Costs ${formatCost(r.cost)}`),
+            r.progress ? progressBar(r.cost, r.progress) : null,
             r.key === 'barracks' && r.level > 0 ? armouryBlock() : null,
           ),
           action,
+        );
+      }),
+    );
+  }
+
+  function renderResearch(): void {
+    const s = engine.state;
+    const cost = researchCost(s);
+    const knowledge = Math.floor(s.resources.knowledge);
+    const next = JSON.stringify(['r', knowledge, s.research]);
+    if (next === sig) return;
+    sig = next;
+
+    const keys = Object.keys(RESEARCH.nodes) as ResearchKey[];
+    const learned = keys.filter((k) => s.research.includes(k));
+    fill(
+      body,
+      h('p', {}, `Knowledge: ${formatNumber(knowledge)} · next discovery costs ${formatNumber(cost)}`),
+      s.buildings.researchHut > 0 ? null : h('p', {}, 'Build a Research Hut and put Jans on Research to earn Knowledge.'),
+      h('p', {}, `${learned.length} of ${keys.length} learned. Each one makes the next a little dearer.`),
+      ...keys.map((k) => {
+        const owned = s.research.includes(k);
+        return h(
+          'div',
+          { class: `job-row ${owned ? 'done' : ''}` },
+          h('div', { class: 'job-info' }, h('b', {}, researchName(k)), h('div', { class: 'detail' }, researchDescription(k))),
+          owned
+            ? h('span', { class: 'hint' }, '✓ Learned')
+            : h(
+                'button',
+                {
+                  class: 'btn',
+                  disabled: knowledge < cost,
+                  onclick: () => {
+                    engine.buyResearch(k);
+                    refresh();
+                  },
+                },
+                'Learn',
+              ),
         );
       }),
     );
@@ -119,16 +177,16 @@ export function buildScreen(close: () => void): Screen {
   return { el, refresh };
 }
 
-function progressText(key: BuildingKey, level: number, progress: Partial<Record<StoredResource, number>>): string {
-  return (Object.entries(buildingCost(key, level)) as Array<[StoredResource, number]>)
+function progressText(cost: Cost, progress: Partial<Record<StoredResource, number>>): string {
+  return (Object.entries(cost) as Array<[StoredResource, number]>)
     .map(([r, v]) => `${formatNumber(Math.min(v, progress[r] ?? 0))}/${formatNumber(v)} ${RESOURCE_LABELS[r]}`)
     .join(' · ');
 }
 
-function progressBar(key: BuildingKey, level: number, progress: Partial<Record<StoredResource, number>>): HTMLElement {
+function progressBar(cost: Cost, progress: Partial<Record<StoredResource, number>>): HTMLElement {
   let have = 0;
   let need = 0;
-  for (const [r, v] of Object.entries(buildingCost(key, level)) as Array<[StoredResource, number]>) {
+  for (const [r, v] of Object.entries(cost) as Array<[StoredResource, number]>) {
     have += Math.min(v, progress[r] ?? 0);
     need += v;
   }
@@ -137,6 +195,6 @@ function progressBar(key: BuildingKey, level: number, progress: Partial<Record<S
     'div',
     { class: 'progress' },
     h('div', { class: 'bar' }, h('div', { class: 'fill', style: `width: ${pct}%` })),
-    h('div', { class: 'detail' }, `Delivered ${progressText(key, level, progress)}`),
+    h('div', { class: 'detail' }, `Delivered ${progressText(cost, progress)}`),
   );
 }

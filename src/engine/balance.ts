@@ -256,6 +256,57 @@ export const BUILDINGS: Record<BuildingKey, BuildingDef> = {
   sledShed: { max: 10, unlockFurnace: 1, start: 0, cost: { wood: 30, materials: 0 }, growth: 1.3 },
 };
 
+// ---------- Research [planned] ----------
+
+/** What a permanent bonus changes. Research uses these now; the Warmth Token shop and Veterans add to them later. */
+export type BonusEffect =
+  | 'chop'
+  | 'hunt'
+  | 'build'
+  | 'research'
+  | 'allJobs'
+  | 'walk'
+  | 'carry'
+  | 'heatPerWood'
+  | 'furnaceCost'
+  | 'blizzardDrain'
+  | 'drain'
+  | 'arrivals'
+  | 'foodEaten'
+  | 'scavenge'
+  | 'guardDamage'
+  | 'caravanWait';
+
+export interface ResearchNode {
+  effect: BonusEffect;
+  /** Fractional change (0.15 = +15%, −0.1 = −10%); for 'carry' it is extra units. */
+  amount: number;
+}
+
+/** One-off purchases with Knowledge. cost = base × growth^(nodes already bought). [brief formula, planned nodes] */
+export const RESEARCH = {
+  cost: { base: 10, growth: 1.5 },
+  nodes: {
+    sharpAxes: { effect: 'chop', amount: 0.15 },
+    snareLines: { effect: 'hunt', amount: 0.15 },
+    betterTools: { effect: 'build', amount: 0.15 },
+    lampOil: { effect: 'research', amount: 0.15 },
+    secondShift: { effect: 'allJobs', amount: 0.1 },
+    warmBoots: { effect: 'walk', amount: 0.2 },
+    biggerSled: { effect: 'carry', amount: 10 },
+    stokerDoor: { effect: 'heatPerWood', amount: 0.1 },
+    furnacePlans: { effect: 'furnaceCost', amount: -0.1 },
+    stormShutters: { effect: 'blizzardDrain', amount: -0.2 },
+    insulation: { effect: 'drain', amount: -0.1 },
+    signalFlags: { effect: 'arrivals', amount: -0.15 },
+    preserves: { effect: 'foodEaten', amount: -0.1 },
+    scoutMaps: { effect: 'scavenge', amount: -0.15 },
+    drillYard: { effect: 'guardDamage', amount: 0.2 },
+    warmBlankets: { effect: 'caravanWait', amount: 0.5 },
+  } satisfies Record<string, ResearchNode>,
+};
+export type ResearchKey = keyof typeof RESEARCH.nodes;
+
 // ---------- Blizzards ----------
 
 export const BLIZZARD = {

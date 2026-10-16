@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { buildingName } from '../content';
-import { CARAVAN, MEAGAN } from '../engine/balance';
-import { buildingCost, carryLimit, heatCap } from '../engine/economy';
+import { MEAGAN } from '../engine/balance';
+import { carryLimit, caravanWait, heatCap, nextCost } from '../engine/economy';
 import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
 import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
@@ -131,7 +131,7 @@ export class CityScene extends Phaser.Scene {
       this.floater(this.sites[0].top, `Raided! ${lost.filter(Boolean).join(' · ')}`);
     }
     else if (e.type === 'upgradeStarted') {
-      const cost = buildingCost(e.building, engine.state.buildings[e.building]);
+      const cost = nextCost(engine.state, e.building);
       this.floater(this.sites[e.site].top, `Bring ${formatCost(cost)}`);
       saveNow();
     } else if (e.type === 'buildingUpgraded') {
@@ -185,7 +185,7 @@ export class CityScene extends Phaser.Scene {
     for (const w of s.waiting) {
       let sprite = this.frozen.get(w.id);
       if (!sprite) this.frozen.set(w.id, (sprite = new JanSprite(this, toScreen(w), true)));
-      sprite.setTimer(w.leavesAt === null ? null : (w.leavesAt - s.t) / CARAVAN.waitSeconds);
+      sprite.setTimer(w.leavesAt === null ? null : (w.leavesAt - s.t) / caravanWait(s));
     }
 
     const present = new Set(s.jans.map((j) => j.id));

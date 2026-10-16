@@ -301,3 +301,26 @@
   padding: calc(var(--u) * 8) 0;
   font-size: calc(var(--u) * 26);
 }
+
+/* ---------- Segmented switch (Build: Buildings | Research) ---------- */
+
+.segmented {
+  display: flex;
+  margin-bottom: calc(var(--u) * 20);
+  border: var(--line-w) solid var(--ink);
+  border-radius: calc(var(--u) * 22);
+  overflow: hidden;
+}
+.seg {
+  flex: 1;
+  min-height: calc(var(--u) * 80);
+  border: 0;
+  background: var(--snow);
+}
+.seg.on {
+  background: var(--ink);
+  color: var(--ice) !important;
+}
+.job-row.done b {
+  color: var(--slate);
+}

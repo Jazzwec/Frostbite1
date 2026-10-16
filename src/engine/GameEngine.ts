@@ -1,9 +1,8 @@
 // The game's rules engine: owns state, runs the fixed tick, exposes player actions. No Phaser or DOM in here.
-import { AUTO_JOB, BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, START, TICK_SECONDS, VARIANTS } from './balance';
+import { AUTO_JOB, BLIZZARD, BUILDINGS, CARAVAN, GEAR, MAX_ADVANCE_SECONDS, MEAGAN, PATH, RESEARCH, START, TICK_SECONDS, VARIANTS, type ResearchKey } from './balance';
 import { updateAttacks } from './combat';
 import {
   arrivalInterval,
-  buildingCost,
   canAfford,
   caps,
   conditionMult,
@@ -17,7 +16,9 @@ import {
   jobRate,
   jobUnlocked,
   kitCost,
+  nextCost,
   pickJanFor,
+  researchCost,
   type Cost,
 } from './economy';
 import { rescueArrival, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
@@ -63,6 +64,7 @@ export function newWinterState(): GameState {
     burnRate: 0,
     found: Object.fromEntries((Object.keys(VARIANTS) as VariantKey[]).map((v) => [v, 0])) as Record<VariantKey, number>,
     stats: { rescued: 0 },
+    research: [],
     autoAssign: false,
     autoAssignTimer: 0,
   };
@@ -259,7 +261,17 @@ export class GameEngine {
   }
 
   costOf(key: BuildingKey): Cost {
-    return buildingCost(key, this.state.buildings[key]);
+    return nextCost(this.state, key);
+  }
+
+  /** Learn a Research node with Knowledge. */
+  buyResearch(key: ResearchKey): boolean {
+    const s = this.state;
+    const cost = researchCost(s);
+    if (!(key in RESEARCH.nodes) || s.research.includes(key) || s.resources.knowledge < cost) return false;
+    s.resources.knowledge -= cost;
+    s.research.push(key);
+    return true;
   }
 
   buy(key: BuildingKey): boolean {

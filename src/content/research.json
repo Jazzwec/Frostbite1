@@ -1,0 +1,18 @@
+{
+  "sharpAxes": { "name": "Sharp Axes", "description": "Chopping +15%" },
+  "snareLines": { "name": "Snare Lines", "description": "Hunting +15%" },
+  "betterTools": { "name": "Better Tools", "description": "Building +15%" },
+  "lampOil": { "name": "Lamp Oil", "description": "Research +15%" },
+  "secondShift": { "name": "Second Shift", "description": "Every job +10%" },
+  "warmBoots": { "name": "Warm Boots", "description": "Meagan walks 20% faster" },
+  "biggerSled": { "name": "Bigger Sled", "description": "Meagan carries 10 more" },
+  "stokerDoor": { "name": "Stoker Door", "description": "Each Wood gives 10% more heat" },
+  "furnacePlans": { "name": "Furnace Plans", "description": "Furnace upgrades cost 10% less" },
+  "stormShutters": { "name": "Storm Shutters", "description": "Blizzards drain 20% less heat" },
+  "insulation": { "name": "Insulation", "description": "Heat drain −10%" },
+  "signalFlags": { "name": "Signal Flags", "description": "Jans arrive 15% more often" },
+  "preserves": { "name": "Preserves", "description": "Jans eat 10% less" },
+  "scoutMaps": { "name": "Scout Maps", "description": "Scavenging bursts come 15% sooner" },
+  "drillYard": { "name": "Drill Yard", "description": "Guards hit 20% harder" },
+  "warmBlankets": { "name": "Warm Blankets", "description": "Caravan Jans wait 50% longer" }
+}

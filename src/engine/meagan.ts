@@ -1,6 +1,6 @@
 // Meagan's rules: walking her path, acting on arrival, gathering by hand, and the magnet between her bag, piles and sites.
 import { BUILDINGS, MAGNET, MEAGAN } from './balance';
-import { bagTotal, caps, carryLimit, fuelCap, remainingCost } from './economy';
+import { bagTotal, bonusMult, caps, carryLimit, fuelCap, remainingCost } from './economy';
 import { rescueArrival, type TickContext } from './events';
 import { FOREST, HUNTING_GROUNDS, SCRAP_HEAP, SITES, distance, moveTowards, pileSiteIndex } from './map';
 import type { GameState, Meagan, StoredResource } from './types';
@@ -12,7 +12,7 @@ const DELIVERED: StoredResource[] = ['wood', 'materials', 'food'];
 export function updateMeagan(s: GameState, dt: number, ctx: TickContext): void {
   const m = s.meagan;
   if (m.injured) return;
-  walk(m, MEAGAN.walkSpeed * dt);
+  walk(m, MEAGAN.walkSpeed * bonusMult(s, 'walk') * dt);
   if (m.path.length === 0 && m.goal) arrive(s, ctx);
 
   const fighting = s.attack.active && s.attack.animals.some((a) => distance(a, m) <= MEAGAN.range);

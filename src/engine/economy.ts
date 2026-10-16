@@ -14,9 +14,12 @@ import {
   JAN_CAP,
   JOBS,
   MEAGAN,
+  RESEARCH,
   SCAVENGE,
   TIER_STARTS,
   VARIANTS,
+  type BonusEffect,
+  type ResearchNode,
 } from './balance';
 import type { Assignment, BuildingKey, GameState, GearKey, Jan, JobKey, ResourceKey, SiteState, StoredResource } from './types';
 
@@ -33,15 +36,51 @@ function roundCost(raw: Cost): Cost {
   return out;
 }
 
-/** Cost of the next level of a building; n = upgrades bought so far (level − starting level). */
-export function buildingCost(key: BuildingKey, level: number): Cost {
+/** Cost of the next level of a building; n = upgrades bought so far (level − starting level). `mult` scales it (discounts). */
+export function buildingCost(key: BuildingKey, level: number, mult = 1): Cost {
   const def = BUILDINGS[key];
   const n = level - def.start;
   const woodOnly = def.firstUpgradeWoodOnly && n === 0;
   return roundCost({
-    wood: curve(def.cost.wood, def.growth, n),
-    materials: woodOnly ? 0 : curve(def.cost.materials, def.growth, n),
+    wood: curve(def.cost.wood, def.growth, n) * mult,
+    materials: woodOnly ? 0 : curve(def.cost.materials, def.growth, n) * mult,
   });
+}
+
+/** What the next level of a building costs this winter, discounts included. */
+export function nextCost(s: GameState, key: BuildingKey): Cost {
+  return buildingCost(key, s.buildings[key], key === 'furnace' ? bonusMult(s, 'furnaceCost') : 1);
+}
+
+// ---------- Permanent bonuses ----------
+
+function ownedResearch(s: GameState): ResearchNode[] {
+  const nodes: Record<string, ResearchNode> = RESEARCH.nodes;
+  return s.research.filter((k) => k in nodes).map((k) => nodes[k]);
+}
+
+/** Multiplier for one effect from every bonus the city has (Research nodes). 1 when there are none. */
+export function bonusMult(s: GameState, effect: BonusEffect): number {
+  let m = 1;
+  for (const n of ownedResearch(s)) if (n.effect === effect) m *= 1 + n.amount;
+  return m;
+}
+
+/** Additive bonus for one effect (carry limit). */
+export function bonusAdd(s: GameState, effect: BonusEffect): number {
+  let a = 0;
+  for (const n of ownedResearch(s)) if (n.effect === effect) a += n.amount;
+  return a;
+}
+
+/** Knowledge price of the next Research node: base × growth^(nodes bought). */
+export function researchCost(s: GameState): number {
+  return Math.ceil(curve(RESEARCH.cost.base, RESEARCH.cost.growth, s.research.length));
+}
+
+/** How long caravan Jans wait at the edge before leaving. */
+export function caravanWait(s: GameState): number {
+  return CARAVAN.waitSeconds * bonusMult(s, 'caravanWait');
 }
 
 export function gearCost(level: number): Cost {
@@ -78,7 +117,7 @@ export function isUnlocked(s: GameState, key: BuildingKey): boolean {
 export function remainingCost(s: GameState, site: SiteState): Cost {
   if (!site.building) return {};
   const out: Cost = {};
-  const cost = buildingCost(site.building, s.buildings[site.building]);
+  const cost = nextCost(s, site.building);
   for (const [k, v] of Object.entries(cost) as Array<[StoredResource, number]>) {
     const left = v - (site.progress[k] ?? 0);
     if (left > 1e-6) out[k] = left; // tolerance for fractional deliveries
@@ -88,7 +127,7 @@ export function remainingCost(s: GameState, site: SiteState): Cost {
 
 /** Most Meagan can carry: the base bag plus the Sled Shed. */
 export function carryLimit(s: GameState): number {
-  return MEAGAN.carryLimit + MEAGAN.carryPerSledLevel * s.buildings.sledShed;
+  return MEAGAN.carryLimit + MEAGAN.carryPerSledLevel * s.buildings.sledShed + bonusAdd(s, 'carry');
 }
 
 export function bagTotal(s: GameState): number {
@@ -108,7 +147,7 @@ export function heatCap(s: GameState): number {
 }
 
 export function heatPerWood(s: GameState): number {
-  return HEAT.perWood * (1 + HEAT.burnEfficiencyPerLevel * (s.buildings.furnace - 1));
+  return HEAT.perWood * (1 + HEAT.burnEfficiencyPerLevel * (s.buildings.furnace - 1)) * bonusMult(s, 'heatPerWood');
 }
 
 export function buildingLevelsForDrain(s: GameState): number {
@@ -121,7 +160,7 @@ export function buildingLevelsForDrain(s: GameState): number {
 export function heatDrain(s: GameState, blizzard = s.blizzard.active): number {
   const raw = HEAT.drainBase + HEAT.drainPerJan * s.jans.length + HEAT.drainPerBuildingLevel * buildingLevelsForDrain(s);
   const springs = Math.max(0, 1 - HEAT.hotSpringsReductionPerLevel * s.buildings.hotSprings);
-  return raw * springs * (blizzard ? BLIZZARD.drainMult : 1);
+  return raw * springs * bonusMult(s, 'drain') * (blizzard ? BLIZZARD.drainMult * bonusMult(s, 'blizzardDrain') : 1);
 }
 
 // ---------- Storage and population ----------
@@ -141,7 +180,7 @@ export function janCap(s: GameState): number {
 
 export function arrivalInterval(s: GameState): number {
   const fill = Math.min(1, s.jans.length / janCap(s));
-  return ARRIVALS.baseInterval * (1 + ARRIVALS.fillSlowdown * fill * fill);
+  return ARRIVALS.baseInterval * (1 + ARRIVALS.fillSlowdown * fill * fill) * bonusMult(s, 'arrivals');
 }
 
 export function caravanGap(s: GameState, base: number): number {
@@ -172,7 +211,8 @@ export function perJanRate(s: GameState, job: JobKey): number {
   const def = JOBS[job];
   const level = s.buildings[def.building];
   if (level <= 0) return 0;
-  return def.baseRate * def.growthPerLevel ** (level - 1);
+  const bonus = job === 'chop' || job === 'hunt' || job === 'build' || job === 'research' ? bonusMult(s, job) : 1;
+  return def.baseRate * def.growthPerLevel ** (level - 1) * bonus * bonusMult(s, 'allJobs');
 }
 
 /** Effective number of Jans on a job after variant bonuses. */
@@ -200,7 +240,7 @@ export function foodEaten(s: GameState): number {
   let n = 0;
   for (const j of s.jans) n += VARIANTS[j.variant].foodMult ?? 1;
   const kitchen = Math.max(0, 1 - FOOD.kitchenReductionPerLevel * s.buildings.kitchen);
-  return n * FOOD.perJanPerSecond * kitchen;
+  return n * FOOD.perJanPerSecond * kitchen * bonusMult(s, 'foodEaten');
 }
 
 // ---------- Job choice (thawing, the Jans screen, Auto-assign) ----------
@@ -283,7 +323,7 @@ export function janToRelease(s: GameState, job: JobKey): number | null {
 }
 
 export function scavengeInterval(s: GameState): number {
-  return SCAVENGE.interval * SCAVENGE.intervalGrowth ** Math.max(0, s.buildings.expeditionPost - 1);
+  return SCAVENGE.interval * SCAVENGE.intervalGrowth ** Math.max(0, s.buildings.expeditionPost - 1) * bonusMult(s, 'scavenge');
 }
 
 export function scavengeBurst(s: GameState, res: StoredResource): number {
@@ -306,6 +346,7 @@ export function guardDamage(s: GameState, jan: Jan): number {
     GUARDS.damagePerSecond *
     JOBS.guard.growthPerLevel ** (barracks - 1) *
     weaponsMult(s) *
+    bonusMult(s, 'guardDamage') *
     (jan.hasKit ? 1 : GUARDS.noKitMult)
   );
 }

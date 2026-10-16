@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { buildingName } from '../content';
 import { BUILDINGS } from '../engine/balance';
-import { buildingCost, isUnlocked } from '../engine/economy';
+import { isUnlocked, nextCost } from '../engine/economy';
 import type { GameEngine } from '../engine/GameEngine';
 import { siteIndexOf } from '../engine/map';
 import type { BuildingKey } from '../engine/types';
@@ -94,7 +94,7 @@ export class BuildPicker extends Phaser.GameObjects.Container {
       fontSize: '28px',
       color: unlocked ? CSS.ink : CSS.slate,
     });
-    const detail = unlocked ? formatCost(buildingCost(key, s.buildings[key])) : `Furnace Lv ${BUILDINGS[key].unlockFurnace}`;
+    const detail = unlocked ? formatCost(nextCost(s, key)) : `Furnace Lv ${BUILDINGS[key].unlockFurnace}`;
     const sub = this.scene.add.text(x + 18, y + 62, detail, {
       fontFamily: FONT,
       fontSize: '24px',

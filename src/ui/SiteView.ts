@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { buildingName } from '../content';
 import { BUILDINGS } from '../engine/balance';
-import { buildingCost, fuelCap } from '../engine/economy';
+import { fuelCap, nextCost } from '../engine/economy';
 import { SITES, pileSiteIndex } from '../engine/map';
 import type { BuildingKey, GameState, Point, StoredResource } from '../engine/types';
 import { ORIGIN, toScreen } from '../scenes/coords';
@@ -93,7 +93,7 @@ export class SiteView extends Phaser.GameObjects.Container {
     else if (level === 0) this.drawConstruction(key);
     else this.drawBuilding(key, level, piles);
 
-    this.drawProgress(key, level, site.upgrading, site.progress);
+    this.drawProgress(s, key, site.upgrading, site.progress);
   }
 
   private drawPlot(): void {
@@ -128,8 +128,8 @@ export class SiteView extends Phaser.GameObjects.Container {
   }
 
   private drawProgress(
+    s: GameState,
     key: BuildingKey | null,
-    level: number,
     upgrading: boolean,
     progress: Partial<Record<StoredResource, number>>,
   ): void {
@@ -138,7 +138,7 @@ export class SiteView extends Phaser.GameObjects.Container {
       this.barText.setVisible(false);
       return;
     }
-    const cost = buildingCost(key, level) as Partial<Record<StoredResource, number>>;
+    const cost = nextCost(s, key) as Partial<Record<StoredResource, number>>;
     let have = 0;
     let need = 0;
     const parts: string[] = [];

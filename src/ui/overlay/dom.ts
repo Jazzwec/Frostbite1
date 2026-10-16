@@ -15,3 +15,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
   for (const c of children) if (c !== null && c !== undefined && c !== false) el.append(c);
   return el;
 }
+
+/** Replace an element's children, skipping null/false like h() does. */
+export function fill(el: Element, ...children: Child[]): void {
+  el.replaceChildren(...children.filter((c): c is Node | string => c !== null && c !== undefined && c !== false));
+}
