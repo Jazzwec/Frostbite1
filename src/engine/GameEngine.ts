@@ -7,6 +7,7 @@ import {
   GEAR,
   MAX_ADVANCE_SECONDS,
   MEAGAN,
+  NODES,
   PATH,
   RESEARCH,
   SHOP,
@@ -38,9 +39,9 @@ import {
   type Cost,
 } from './economy';
 import { rescueArrival, updateArrivals, updateBlizzard, updateHeatZero, updateScavenging, type TickContext } from './events';
-import { MAP_BOUNDS, MEAGAN_START, SITES, distance, siteIndexOf } from './map';
+import { MAP_BOUNDS, MEAGAN_START, RESOURCE_NODES, SITES, distance, siteIndexOf } from './map';
 import { rebalanceJobs, updateAutoAssign } from './jobs';
-import { updateMeagan } from './meagan';
+import { updateMeagan, updateNodes } from './meagan';
 import { canBuyShop, canThaw, claimThaw, shopPrice, startNewWinter } from './prestige';
 import { buildGrid, findPath, type NavGrid } from './pathfinding';
 import { seededRng, type Rng } from './rng';
@@ -86,6 +87,7 @@ export function newWinterState(meta: Meta = newMeta()): GameState {
     },
     fuel: warm ? WARM_START.fuel : 0,
     sites: SITES.map((d) => ({ building: d.fixed ?? null, upgrading: false, progress: {} })),
+    nodes: RESOURCE_NODES.map((n) => NODES[n.kind].stock),
     nextId: 1,
     arrivalTimer: 0,
     caravanNext: CARAVAN.firstAt,
@@ -189,6 +191,7 @@ export class GameEngine {
     updateBlizzard(s, this.ctx);
     updateAttacks(s, dt, this.ctx);
     updateMeagan(s, dt, this.ctx);
+    updateNodes(s, dt);
 
     // Jan output piles up at the producers; Jans eat from the food storage.
     s.resources.wood += jobRate(s, 'chop') * dt;

@@ -67,7 +67,9 @@ A sixth resource, Warmth Tokens, is earned only at prestige and spent on permane
 
 Storehouse multiplies every Wood, Food and Materials cap by 1.25 per level (compounding).
 
-**Start of a winter.** The city starts empty: 0 Jans, 0 of every resource and a cold furnace (heat 0). Furnace, Lumber Yard and Hunting Lodge are at Lv 1. Meagan rescues the first Jan herself and gathers the first resources by hand. Like the ads, she works automatically whenever she walks near the forest (5 Wood/s), the hunting grounds (3 Food/s) or the scrap heap behind the furnace (1 Materials/s, enough to reach the first Workshop). Cold and hunger don't slow her.
+**Start of a winter.** The city starts empty: 0 Jans, 0 of every resource and a cold furnace (heat 0). Furnace, Lumber Yard and Hunting Lodge are at Lv 1. Meagan rescues the first Jan herself and gathers the first resources by hand. Like the ads, she works automatically whenever she stands at a forest (5 Wood/s), a hunting ground (3 Food/s) or a scrap heap (1 Materials/s, enough to reach the first Workshop). Cold and hunger don't slow her.
+
+**The map** is about three phone screens of snowfield with the town in the middle; the camera follows Meagan and a one-finger drag looks around. Resource spots are scattered around the outskirts: 4 forests, 3 hunting grounds and 3 scrap heaps. Each holds a stock (forest 60 Wood, hunting ground 40 Food, scrap heap 15 Materials) that runs down as she gathers and grows back steadily, full again about 3 minutes after being emptied (scrap heaps 4), so she roams between them. Frozen Jans, caravans and animals arrive from the far edges; animals walk faster to keep their roughly 10-second approach.
 
 **Carrying and building (decided in Phase 3 planning).** Resources are physical, as in the ads:
 

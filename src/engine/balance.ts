@@ -1,7 +1,7 @@
 // Every tunable number in the game. Engine logic reads from here and never hard-codes a value.
 // [brief] = from docs/design-brief.md. [planned] = decided with Jan while planning the engine (also recorded in the brief).
 
-import type { AnimalKind, BuildingKey, JobKey, ResourceKey, ShopKey, VariantKey } from './types';
+import type { AnimalKind, BuildingKey, JobKey, NodeKind, ResourceKey, ShopKey, VariantKey } from './types';
 
 /** Fixed simulation step in seconds: 10 ticks per second. [brief] */
 export const TICK_SECONDS = 0.1;
@@ -165,6 +165,13 @@ export const MEAGAN = {
   /** Each Sled Shed level lets her carry this much more. [planned] */
   carryPerSledLevel: 10,
 } as const;
+
+/** Resource spots: how much each holds, and how long an emptied one takes to grow back in full. [planned] */
+export const NODES: Record<NodeKind, { stock: number; regrowSeconds: number }> = {
+  forest: { stock: 60, regrowSeconds: 180 },
+  hunting: { stock: 40, regrowSeconds: 180 },
+  scrap: { stock: 15, regrowSeconds: 240 },
+};
 
 /** Resources jump between Meagan's bag and a pile or site she walks near. [planned] */
 export const MAGNET = {
@@ -398,7 +405,7 @@ export const ATTACK = {
   tier2BearChance: 1 / 3,
   tier3OldBearChance: 0.2,
   /** Movement in map units per second. */
-  animalSpeed: 40,
+  animalSpeed: 70,
   /** Animals fight anything within this distance and engage defenders within engageRadius. */
   animalRange: 40,
   animalEngageRadius: 60,
@@ -411,7 +418,7 @@ export const ATTACK = {
   furnaceStealWoodFood: 0.15,
   furnaceStealHeat: 0.2,
   /** Animals spawn this far from the furnace. */
-  spawnRadius: 450,
+  spawnRadius: 800,
 } as const;
 
 export const GUARDS = {

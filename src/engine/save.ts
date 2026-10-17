@@ -31,6 +31,8 @@ export function deserialize(json: string): LoadedSave | null {
   const state = merge(fresh, raw.state) as GameState;
   // A layout change can add plots: keep saved sites, fill the rest fresh.
   state.sites = fresh.sites.map((site, i) => (isObject(state.sites[i]) ? merge(site, state.sites[i]) : site)) as GameState['sites'];
+  // Likewise resource spots: saved stock where it exists, full stock for spots the save didn't know about.
+  state.nodes = fresh.nodes.map((full, i) => (typeof state.nodes[i] === 'number' ? state.nodes[i] : full));
   return { state, savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : Date.now() };
 }
 

@@ -1,29 +1,49 @@
-// City layout in engine units. The furnace sits at the origin; the renderer maps these to screen pixels (1 unit = 1 logical px).
+// City layout in engine units. The furnace sits at the origin; the renderer maps these to world pixels (1 unit = 1 logical px).
+// The town fills the middle; resource spots, arrival spots and the caravan row sit out in the wider snowfield.
 import { JOBS } from './balance';
 import type { Bounds } from './pathfinding';
-import type { BuildingKey, GameState, JobKey, Point, Rect, StoredResource } from './types';
+import type { BuildingKey, GameState, JobKey, NodeKind, Point, Rect, StoredResource } from './types';
 
 export const FURNACE: Point = { x: 0, y: 0 };
 
-/** Where Meagan's centre may walk: the snowfield below the horizon. */
-export const MAP_BOUNDS: Bounds = { minX: -370, minY: -400, maxX: 370, maxY: 660 };
+/** Where Meagan's centre may walk: the whole snowfield below the horizon (about 3 phone screens). */
+export const MAP_BOUNDS: Bounds = { minX: -640, minY: -900, maxX: 640, maxY: 1000 };
 
-/** Where Meagan gathers by hand. */
-export const FOREST: Point = { x: -320, y: -260 };
-export const HUNTING_GROUNDS: Point = { x: 320, y: -260 };
-/** A wrecked sled behind the furnace where she scavenges Materials by hand. */
-export const SCRAP_HEAP: Point = { x: -80, y: -360 };
+export interface ResourceNode {
+  kind: NodeKind;
+  at: Point;
+}
 
-/** Edge spots where single Jans stagger in, clear of every site. */
+/** Resource spots scattered around the town (none inside it). Meagan gathers wherever she stands on one. */
+export const RESOURCE_NODES: ResourceNode[] = [
+  { kind: 'forest', at: { x: -480, y: -330 } },
+  { kind: 'forest', at: { x: 160, y: -780 } },
+  { kind: 'forest', at: { x: 540, y: 220 } },
+  { kind: 'forest', at: { x: -470, y: 830 } },
+  { kind: 'hunting', at: { x: 520, y: -560 } },
+  { kind: 'hunting', at: { x: -560, y: 330 } },
+  { kind: 'hunting', at: { x: 380, y: 880 } },
+  { kind: 'scrap', at: { x: -560, y: -640 } },
+  { kind: 'scrap', at: { x: 560, y: 620 } },
+  { kind: 'scrap', at: { x: -120, y: 920 } },
+];
+
+const firstOf = (kind: NodeKind): Point => RESOURCE_NODES.find((n) => n.kind === kind)!.at;
+/** The nearest spot of each kind to the town (dev hooks and tests use these). */
+export const FOREST: Point = firstOf('forest');
+export const HUNTING_GROUNDS: Point = firstOf('hunting');
+export const SCRAP_HEAP: Point = firstOf('scrap');
+
+/** Edge spots where single Jans stagger in, clear of every site and resource spot. */
 export const ARRIVAL_SPOTS: Point[] = [
-  { x: -355, y: -10 },
-  { x: 355, y: -10 },
-  { x: -135, y: 645 },
-  { x: 135, y: 645 },
+  { x: -620, y: 80 },
+  { x: 620, y: -160 },
+  { x: -300, y: 980 },
+  { x: 200, y: 980 },
 ];
 
 /** Caravan Jans line up along the top edge, just below the horizon. */
-export const CARAVAN_SPOTS: Point[] = Array.from({ length: 7 }, (_, i) => ({ x: -240 + i * 60, y: -385 }));
+export const CARAVAN_SPOTS: Point[] = Array.from({ length: 7 }, (_, i) => ({ x: -420 + i * 60, y: -880 }));
 
 export interface SiteDef {
   /** Buildings that start in place; every other site is an empty plot. */

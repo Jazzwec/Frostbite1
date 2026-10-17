@@ -19,6 +19,7 @@ export class Banner {
         this.show(`${e.long ? MESSAGES.longNightWarning : blizzardWarningLine()} (${formatClock(e.startsIn)})`, 'cold');
       else if (e.type === 'blizzardStart') this.show(e.long ? MESSAGES.longNightStart : MESSAGES.blizzardStart, 'alert');
       else if (e.type === 'blizzardEnd') this.show(MESSAGES.blizzardEnd, 'calm');
+      else if (e.type === 'caravan') this.show(`A caravan of ${e.count} Jans is waiting at the top of the map!`, 'calm');
       else if (e.type === 'attackWarn') this.show(`Animals spotted! Here in ${formatClock(e.startsIn)}`, 'alert');
       else if (e.type === 'attackStart') this.show(`${e.animals} animals are coming for the furnace!`, 'alert');
       else if (e.type === 'attackEnd')

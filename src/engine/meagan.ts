@@ -1,9 +1,9 @@
 // Meagan's rules: walking her path, acting on arrival, gathering by hand, and the magnet between her bag, piles and sites.
-import { BUILDINGS, MAGNET, MEAGAN } from './balance';
+import { BUILDINGS, MAGNET, MEAGAN, NODES } from './balance';
 import { bagTotal, bonusMult, caps, carryLimit, fuelCap, remainingCost } from './economy';
 import { rescueArrival, type TickContext } from './events';
-import { FOREST, HUNTING_GROUNDS, SCRAP_HEAP, SITES, distance, moveTowards, pileSiteIndex } from './map';
-import type { GameState, Meagan, StoredResource } from './types';
+import { RESOURCE_NODES, SITES, distance, moveTowards, pileSiteIndex } from './map';
+import type { GameState, Meagan, NodeKind, StoredResource } from './types';
 
 /** Resources she can pick up from a pile to deliver elsewhere. Food only ever goes into the food storage. */
 const PICKED_UP: StoredResource[] = ['wood', 'materials'];
@@ -50,12 +50,31 @@ function arrive(s: GameState, ctx: TickContext): void {
   ctx.emit({ type: 'upgradeStarted', site: i, building: key });
 }
 
-/** She gathers into her bag near the forest, the hunting grounds or the scrap heap. Cold and hunger don't slow her. */
+/** What each kind of spot gives and how fast she gathers it. */
+const YIELD: Record<NodeKind, { res: StoredResource; perSecond: number }> = {
+  forest: { res: 'wood', perSecond: MEAGAN.woodPerSecond },
+  hunting: { res: 'food', perSecond: MEAGAN.foodPerSecond },
+  scrap: { res: 'materials', perSecond: MEAGAN.materialsPerSecond },
+};
+
+/** She gathers into her bag at whichever spot she stands on, while it has stock. Cold and hunger don't slow her. */
 function gather(s: GameState, dt: number): void {
   const m = s.meagan;
-  if (distance(m, FOREST) <= MEAGAN.gatherRange) m.bag.wood += Math.min(MEAGAN.woodPerSecond * dt, room(s));
-  if (distance(m, HUNTING_GROUNDS) <= MEAGAN.gatherRange) m.bag.food += Math.min(MEAGAN.foodPerSecond * dt, room(s));
-  if (distance(m, SCRAP_HEAP) <= MEAGAN.gatherRange) m.bag.materials += Math.min(MEAGAN.materialsPerSecond * dt, room(s));
+  RESOURCE_NODES.forEach((node, i) => {
+    if (distance(m, node.at) > MEAGAN.gatherRange) return;
+    const { res, perSecond } = YIELD[node.kind];
+    const take = Math.max(0, Math.min(perSecond * dt, room(s), s.nodes[i]));
+    m.bag[res] += take;
+    s.nodes[i] -= take;
+  });
+}
+
+/** Every spot grows back steadily, reaching full stock regrowSeconds after it was emptied. */
+export function updateNodes(s: GameState, dt: number): void {
+  RESOURCE_NODES.forEach((node, i) => {
+    const { stock, regrowSeconds } = NODES[node.kind];
+    s.nodes[i] = Math.min(stock, s.nodes[i] + (stock / regrowSeconds) * dt);
+  });
 }
 
 function room(s: GameState): number {

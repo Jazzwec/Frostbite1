@@ -70,7 +70,8 @@ export class BuildPicker extends Phaser.GameObjects.Container {
       const y = top + HEADER_H + Math.floor(i / COLS) * (BTN_H + GAP);
       this.add(this.button(key, x, y, btnW));
     });
-    this.setVisible(true);
+    // A screen-fixed sheet: it stays put however the camera has scrolled.
+    this.setScrollFactor(0, 0, true).setVisible(true);
   }
 
   close(): void {

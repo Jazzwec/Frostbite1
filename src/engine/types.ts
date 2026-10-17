@@ -18,6 +18,9 @@ export type BuildingKey =
   | 'sledShed';
 
 export type JobKey = 'chop' | 'hunt' | 'build' | 'research' | 'scavenge' | 'guard';
+
+/** A resource spot Meagan gathers from by hand: forests (Wood), hunting grounds (Food), scrap heaps (Materials). */
+export type NodeKind = 'forest' | 'hunting' | 'scrap';
 export type Assignment = JobKey | 'idle';
 
 export type VariantKey = 'plain' | 'chef' | 'sleepy' | 'spreadsheet' | 'keys' | 'lumberjack' | 'dj';
@@ -158,6 +161,8 @@ export interface GameState {
   meagan: Meagan;
   /** Wood Meagan has delivered into the furnace, burned to make heat. */
   fuel: number;
+  /** Stock left at each resource spot, aligned with RESOURCE_NODES in map.ts. */
+  nodes: number[];
   /** Aligned with SITES in map.ts. */
   sites: SiteState[];
   nextId: number;

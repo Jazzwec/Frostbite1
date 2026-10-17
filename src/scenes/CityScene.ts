@@ -2,13 +2,13 @@ import Phaser from 'phaser';
 import { buildingName, chatterLine, rescueLine } from '../content';
 import { MEAGAN } from '../engine/balance';
 import { bagTotal, carryLimit, caravanWait, heatCap, nextCost, tierOf } from '../engine/economy';
-import { CARAVAN_SPOTS, FOREST, HUNTING_GROUNDS, MEAGAN_START, SCRAP_HEAP, SITES, distance, jobSite } from '../engine/map';
+import { MEAGAN_START, RESOURCE_NODES, SITES, distance, jobSite } from '../engine/map';
 import { findPath } from '../engine/pathfinding';
 import type { EngineEvent, GameState, Jan, Point, Rect } from '../engine/types';
 import { bus } from '../game/bus';
 import { devFlags, engine, saveNow } from '../game/runtime';
 import { sfx } from '../game/sound';
-import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH } from '../theme';
+import { COLOURS, CSS, FONT, GAME_HEIGHT, GAME_WIDTH, TAB_BAR_HEIGHT } from '../theme';
 import { BuildPicker } from '../ui/BuildPicker';
 import { AnimalSprite } from '../ui/AnimalSprite';
 import { artImage, hasArt, preloadArt, trimArt } from '../ui/art';
@@ -16,16 +16,26 @@ import { JOB_LABELS, formatCost, formatNumber } from '../ui/format';
 import { HeatBar } from '../ui/HeatBar';
 import { JanSprite } from '../ui/JanSprite';
 import { MeaganSprite } from '../ui/MeaganSprite';
+import { NodeView } from '../ui/NodeView';
 import { SiteView } from '../ui/SiteView';
-import { ORIGIN, toScreen, toWorld } from './coords';
+import { ORIGIN, SKY_H, WORLD_H, WORLD_W, toScreen, toWorld } from './coords';
 
 /** Where the sky meets the snow: just above the top of the walkable map. */
-const HORIZON = ORIGIN.y - 420;
+const HORIZON = SKY_H - 20;
 const FURNACE_X = ORIGIN.x;
 const FURNACE_Y = ORIGIN.y; // base of the furnace
 
-/** Tapping within this many map units of a gathering spot walks her right onto it. */
+/** Tapping within this many map units of a resource spot walks her right onto it. */
 const GATHER_TAP_RADIUS = 100;
+/** A press that moves further than this (screen px) is a drag that pans the camera, not a tap. */
+const DRAG_THRESHOLD = 14;
+/** After a drag, the camera goes back to following Meagan this long after the last move, or when she's sent somewhere. */
+const FOLLOW_RESUME_MS = 4000;
+/** Camera smoothing, and how far above her feet it centres (so her whole body sits mid-screen). */
+const FOLLOW_LERP = 0.1;
+const FOLLOW_OFFSET_Y = 60;
+/** Off-screen frozen Jans get an arrow at the screen edge, kept clear of the heat bar, strip and tab bar. */
+const EDGE_ARROW_INSET = { side: 44, top: 260, bottom: TAB_BAR_HEIGHT + 44 };
 /** Tap radius around a frozen Jan's body (≥ 44 pt on the phone). */
 const FROZEN_TAP_RADIUS = 55;
 /** Idle chatter: one line over a random working Jan every 20–30 s while the city is calm (brief). */
@@ -47,14 +57,11 @@ const FURNACE_ART_WIDTH = 360;
 const FURNACE_TINTS = [0x9fb3c6, 0xc9d3dd, 0xe3e8ee, 0xf4f4f4, 0xffffff];
 /** Where the chimney mouth is in the furnace art, as fractions of its cropped size (matches src/assets/art/furnace.png). */
 const FURNACE_ART_CHIMNEY = { x: 0.855, y: 0.19 };
-/** Height of a generated pine tree at scale 1, and width of the scrap heap art. */
-const PINE_ART_HEIGHT = 125;
-const SCRAP_ART_WIDTH = 150;
 /** Jans sharing a job stand in a little group around its work spot. */
 const CROWD = { perRow: 4, dx: 26, dy: 24 } as const;
 
-/** Draw order: background < world (sorted by screen y) < snowfall < debug < HUD < menus. */
-const DEPTH = { background: -10000, snowfall: 5000, debug: 9000, hud: 10000 } as const;
+/** Draw order: background < world (sorted by y) < snowfall < debug < edge arrows < HUD < menus. */
+const DEPTH = { background: -10000, snowfall: 5000, debug: 9000, arrows: 9500, hud: 10000 } as const;
 
 export class CityScene extends Phaser.Scene {
   heatBar!: HeatBar;
@@ -69,6 +76,13 @@ export class CityScene extends Phaser.Scene {
   private heatStage = -1;
   private tierShown = 0;
   private decor: Phaser.GameObjects.GameObject[] = [];
+  private nodes: NodeView[] = [];
+  private arrows!: Phaser.GameObjects.Graphics;
+  /** Camera drag: where the press started (screen px), whether it became a drag, and when to follow Meagan again. */
+  private pressAt: Point | null = null;
+  private dragging = false;
+  private following = true;
+  private followResumeAt = 0;
   private readonly frozen = new Map<number, JanSprite>();
   private readonly jans = new Map<number, JanSprite>();
   private readonly animals = new Map<number, AnimalSprite>();
@@ -108,7 +122,7 @@ export class CityScene extends Phaser.Scene {
     this.decor = [];
     this.makeTextures();
     this.drawBackground();
-    this.drawGatherSpots();
+    this.nodes = RESOURCE_NODES.map((_, i) => new NodeView(this, i));
     this.drawFurnace();
     this.addSnowfall();
 
@@ -116,14 +130,51 @@ export class CityScene extends Phaser.Scene {
     this.meagan = new MeaganSprite(this, toScreen(engine.state.meagan));
     this.picker = new BuildPicker(this, engine);
     this.debug = this.add.graphics().setDepth(DEPTH.debug);
+    this.arrows = this.add.graphics().setDepth(DEPTH.arrows).setScrollFactor(0);
 
     this.heatBar = new HeatBar(this, 48, 36, GAME_WIDTH - 96);
-    this.heatBar.setDepth(DEPTH.hud);
+    this.heatBar.setDepth(DEPTH.hud).setScrollFactor(0, 0, true);
     this.syncHeat();
 
+    // The camera roams the whole world and follows Meagan.
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, WORLD_W, WORLD_H);
+    cam.centerOn(this.meagan.x, this.meagan.y - FOLLOW_OFFSET_Y);
+    this.following = false;
+    this.followMeagan();
+    this.pressAt = null;
+    this.dragging = false;
+
+    // One finger: a short press is a tap (walk/act); moving further drags the view around.
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      if (over.length === 0) this.onTap(toWorld({ x: p.worldX, y: p.worldY }));
+      this.pressAt = over.length === 0 ? { x: p.x, y: p.y } : null;
+      this.dragging = false;
     });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!p.isDown || !this.pressAt) return;
+      if (!this.dragging && Phaser.Math.Distance.Between(p.x, p.y, this.pressAt.x, this.pressAt.y) < DRAG_THRESHOLD) return;
+      if (!this.dragging) {
+        this.dragging = true;
+        this.following = false;
+        cam.stopFollow();
+      }
+      cam.scrollX -= p.x - p.prevPosition.x;
+      cam.scrollY -= p.y - p.prevPosition.y;
+      this.followResumeAt = this.time.now + FOLLOW_RESUME_MS;
+    });
+    this.input.on('pointerup', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      const tap = this.pressAt !== null && !this.dragging && over.length === 0;
+      this.pressAt = null;
+      this.dragging = false;
+      if (tap) this.onTap(toWorld({ x: p.worldX, y: p.worldY }));
+    });
+  }
+
+  /** Smoothly follow Meagan again (after a drag). */
+  private followMeagan(): void {
+    if (this.following) return;
+    this.following = true;
+    this.cameras.main.startFollow(this.meagan, false, FOLLOW_LERP, FOLLOW_LERP).setFollowOffset(0, FOLLOW_OFFSET_Y);
   }
 
   update(_time: number, delta: number): void {
@@ -147,11 +198,15 @@ export class CityScene extends Phaser.Scene {
     this.syncJans(s, delta);
     this.syncAnimals(s, delta);
     this.chatter(s, delta);
+    s.nodes.forEach((stock, i) => this.nodes[i].sync(stock));
+    if (!this.following && !this.dragging && this.time.now >= this.followResumeAt) this.followMeagan();
+    this.drawEdgeArrows(s);
     this.drawDebug();
   }
 
   /** A tap on open map: a site walks her there to act, the gathering spots walk her onto them, anywhere else just walks. */
   private onTap(p: Point): void {
+    this.followMeagan();
     const frozen = engine.state.waiting.find((w) => distance({ x: w.x, y: w.y - 50 }, p) <= FROZEN_TAP_RADIUS);
     if (frozen) {
       if (engine.tapArrival(frozen.id)) this.tapMarker(frozen);
@@ -162,7 +217,7 @@ export class CityScene extends Phaser.Scene {
       if (engine.tapSite(site)) this.tapMarker(SITES[site].drop);
       return;
     }
-    const spot = [FOREST, HUNTING_GROUNDS, SCRAP_HEAP].find((g) => distance(g, p) <= GATHER_TAP_RADIUS);
+    const spot = RESOURCE_NODES.map((n) => n.at).find((g) => distance(g, p) <= GATHER_TAP_RADIUS);
     if (engine.walkTo(spot ?? p)) this.tapMarker(engine.state.meagan.path.at(-1)!);
   }
 
@@ -175,8 +230,7 @@ export class CityScene extends Phaser.Scene {
     } else if (e.type === 'rescueBlocked') {
       const w = engine.state.waiting.find((a) => a.id === e.id);
       if (w) this.floater(above(w), 'No room!\nUpgrade the Furnace or build a Bunkhouse');
-    } else if (e.type === 'caravan') this.floater(above(CARAVAN_SPOTS[3]), `A caravan of ${e.count} Jans arrived!`);
-    else if (e.type === 'animalKilled') this.floater(above(e.at), `+${formatNumber(e.food)} Food · +${formatNumber(e.materials)} Mat`);
+    } else if (e.type === 'animalKilled') this.floater(above(e.at), `+${formatNumber(e.food)} Food · +${formatNumber(e.materials)} Mat`);
     else if (e.type === 'janScared') this.floater(above(e.at), 'A Jan ran off for good!');
     else if (e.type === 'meaganInjured') this.floater(above(engine.state.meagan), 'Ouch! Meagan needs a rest');
     else if (e.type === 'furnaceHit') {
@@ -253,7 +307,9 @@ export class CityScene extends Phaser.Scene {
         this.decor.push(lantern);
       }
       const drifts = this.add.graphics().setDepth(DEPTH.background + 2);
-      drifts.fillStyle(COLOURS.ice, 1).fillEllipse(70, GAME_HEIGHT - 150, 260, 90).fillEllipse(GAME_WIDTH - 60, GAME_HEIGHT - 170, 280, 100);
+      for (const at of [toScreen({ x: -560, y: 960 }), toScreen({ x: 560, y: 940 }), toScreen({ x: 0, y: -860 })]) {
+        drifts.fillStyle(COLOURS.ice, 1).fillEllipse(at.x, at.y, 280, 100);
+      }
       this.decor.push(drifts);
     }
   }
@@ -276,8 +332,9 @@ export class CityScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 1)
       .setDepth(DEPTH.hud - 1);
-    // Keep it on screen near the edges.
-    t.x = Phaser.Math.Clamp(t.x, t.width / 2 + 8, GAME_WIDTH - t.width / 2 - 8);
+    // Keep it inside the camera's view near the edges.
+    const view = this.cameras.main.worldView;
+    t.x = Phaser.Math.Clamp(t.x, view.x + t.width / 2 + 8, view.right - t.width / 2 - 8);
     this.tweens.add({ targets: t, y: at.y - 60, alpha: 0, delay: 1200, duration: 700, onComplete: () => t.destroy() });
   }
 
@@ -376,6 +433,36 @@ export class CityScene extends Phaser.Scene {
     }
   }
 
+  /** A frost-blue arrow at the screen edge for each frozen Jan out of view, pointing the way to him. */
+  private drawEdgeArrows(s: GameState): void {
+    const g = this.arrows;
+    g.clear();
+    const view = this.cameras.main.worldView;
+    const cx = GAME_WIDTH / 2;
+    const cy = (EDGE_ARROW_INSET.top + GAME_HEIGHT - EDGE_ARROW_INSET.bottom) / 2;
+    for (const w of s.waiting) {
+      const p = toScreen(w);
+      if (view.contains(p.x, p.y - 50)) continue;
+      // Direction from the middle of the visible area to the Jan, in screen space.
+      const dx = p.x - view.x - cx;
+      const dy = p.y - 50 - view.y - cy;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const halfW = cx - EDGE_ARROW_INSET.side;
+      const halfH = (GAME_HEIGHT - EDGE_ARROW_INSET.bottom - EDGE_ARROW_INSET.top) / 2;
+      const t = Math.min(halfW / Math.max(Math.abs(ux), 1e-6), halfH / Math.max(Math.abs(uy), 1e-6));
+      const ax = cx + ux * t;
+      const ay = cy + uy * t;
+      g.fillStyle(COLOURS.frost, 0.9).fillCircle(ax, ay, 24);
+      g.lineStyle(4, COLOURS.ice, 1).strokeCircle(ax, ay, 24);
+      // Arrowhead pointing outwards.
+      const px = -uy;
+      const py = ux;
+      g.fillStyle(COLOURS.ice, 1).fillTriangle(ax + ux * 16, ay + uy * 16, ax - ux * 6 + px * 10, ay - uy * 6 + py * 10, ax - ux * 6 - px * 10, ay - uy * 6 - py * 10);
+    }
+  }
+
   /** Dev only: frostbite.debugPath = true shows blocked cells and her current path. */
   private drawDebug(): void {
     this.debug.clear();
@@ -420,95 +507,29 @@ export class CityScene extends Phaser.Scene {
 
   private drawBackground(): void {
     const g = this.add.graphics().setDepth(DEPTH.background);
-    // Sky fades into the snowfield.
+    // Sky fades into the snowfield, which covers the whole world.
     g.fillGradientStyle(COLOURS.sky, COLOURS.sky, COLOURS.snow, COLOURS.snow, 1);
-    g.fillRect(0, 0, GAME_WIDTH, HORIZON);
-    g.fillStyle(COLOURS.snow, 1).fillRect(0, HORIZON, GAME_WIDTH, GAME_HEIGHT - HORIZON);
+    g.fillRect(0, 0, WORLD_W, HORIZON);
+    g.fillStyle(COLOURS.snow, 1).fillRect(0, HORIZON, WORLD_W, WORLD_H - HORIZON);
 
     // Distant pines on the horizon.
     g.fillStyle(COLOURS.frostSoft, 0.55);
-    for (let x = -20; x < GAME_WIDTH + 40; x += 46) {
+    for (let x = -20; x < WORLD_W + 40; x += 46) {
       const h = 70 + ((x * 37) % 50);
       g.fillTriangle(x, HORIZON + 10, x + 26, HORIZON - h, x + 52, HORIZON + 10);
     }
 
-    // Rolling drifts in the foreground, lighter towards the viewer.
-    const drifts: Array<[number, number, number, number, number]> = [
-      [120, HORIZON + 40, 420, 90, COLOURS.snowDeep],
-      [640, HORIZON + 70, 480, 110, COLOURS.snowDeep],
-      [60, 1340, 520, 160, COLOURS.snowDeep],
-      [720, 1420, 560, 180, COLOURS.snowDeep],
-      [380, 1600, 900, 220, COLOURS.ice],
-    ];
-    for (const [x, y, w, h, c] of drifts) g.fillStyle(c, 1).fillEllipse(x, y, w, h);
+    // Soft drifts scattered over the snowfield in a fixed pattern.
+    for (let i = 0; i < 26; i++) {
+      const x = (i * 397) % WORLD_W;
+      const y = HORIZON + 60 + ((i * 613) % (WORLD_H - HORIZON - 60));
+      const w = 260 + ((i * 53) % 280);
+      g.fillStyle(i % 3 === 0 ? COLOURS.ice : COLOURS.snowDeep, 1).fillEllipse(x, y, w, w * 0.28);
+    }
 
     // Packed-snow clearing the furnace stands in.
     g.fillStyle(COLOURS.ice, 1).fillEllipse(FURNACE_X, FURNACE_Y, 560, 150);
     g.lineStyle(4, COLOURS.line, 1).strokeEllipse(FURNACE_X, FURNACE_Y, 560, 150);
-  }
-
-  /** Placeholder forest (Wood), hunting grounds (Food) and scrap heap (Materials) where Meagan gathers by hand. */
-  private drawGatherSpots(): void {
-    const forest = toScreen(FOREST);
-    const trees: Array<[number, number, number]> = [
-      [-50, -50, 1],
-      [10, -70, 1.15],
-      [55, -40, 0.9],
-      [-30, -10, 0.8],
-    ];
-    for (const [dx, dy, k] of trees) {
-      const x = forest.x + dx;
-      const base = forest.y + dy;
-      if (hasArt(this, 'pine')) {
-        artImage(this, 'pine', x, base, { height: PINE_ART_HEIGHT * k }).setDepth(base);
-        continue;
-      }
-      const g = this.add.graphics().setDepth(base);
-      g.fillStyle(COLOURS.timber, 1).fillRect(x - 6 * k, base - 14 * k, 12 * k, 14 * k);
-      g.fillStyle(COLOURS.pine, 1).fillTriangle(x - 34 * k, base - 12 * k, x, base - 110 * k, x + 34 * k, base - 12 * k);
-      g.fillStyle(COLOURS.ice, 1).fillTriangle(x - 12 * k, base - 80 * k, x, base - 110 * k, x + 12 * k, base - 80 * k);
-      g.lineStyle(4, COLOURS.ink, 1).strokeTriangle(x - 34 * k, base - 12 * k, x, base - 110 * k, x + 34 * k, base - 12 * k);
-    }
-    this.add.ellipse(forest.x, forest.y, 120, 34, COLOURS.snowDeep, 1).setDepth(DEPTH.background + 1);
-
-    const hunt = toScreen(HUNTING_GROUNDS);
-    const g = this.add.graphics().setDepth(DEPTH.background + 1);
-    g.fillStyle(COLOURS.snowDeep, 1).fillEllipse(hunt.x, hunt.y, 150, 50);
-    // Paw prints crossing the clearing.
-    g.fillStyle(COLOURS.slate, 0.45);
-    for (let i = 0; i < 5; i++) g.fillCircle(hunt.x - 60 + i * 28, hunt.y - 8 + (i % 2) * 14, 5);
-    const bushes = this.add.graphics().setDepth(hunt.y - 40);
-    for (const [dx, dy] of [
-      [-40, -40],
-      [30, -55],
-    ]) {
-      bushes.fillStyle(COLOURS.pine, 1).fillEllipse(hunt.x + dx, hunt.y + dy, 60, 40);
-      bushes.lineStyle(4, COLOURS.ink, 1).strokeEllipse(hunt.x + dx, hunt.y + dy, 60, 40);
-      bushes.fillStyle(COLOURS.ember, 1).fillCircle(hunt.x + dx - 10, hunt.y + dy - 4, 4).fillCircle(hunt.x + dx + 8, hunt.y + dy + 4, 4);
-    }
-
-    // A wrecked sled with spilled crates.
-    const scrap = toScreen(SCRAP_HEAP);
-    this.add.ellipse(scrap.x, scrap.y, 140, 40, COLOURS.snowDeep, 1).setDepth(DEPTH.background + 1);
-    if (hasArt(this, 'scrap')) artImage(this, 'scrap', scrap.x, scrap.y + 6, { width: SCRAP_ART_WIDTH }).setDepth(scrap.y - 10);
-    const wreck = this.add.graphics().setDepth(scrap.y - 10).setVisible(!hasArt(this, 'scrap'));
-    wreck.lineStyle(6, COLOURS.slate, 1).lineBetween(scrap.x - 60, scrap.y - 10, scrap.x + 10, scrap.y - 22);
-    wreck.lineStyle(6, COLOURS.slate, 1).lineBetween(scrap.x - 55, scrap.y - 2, scrap.x + 15, scrap.y - 14);
-    wreck.fillStyle(COLOURS.timber, 1).fillRect(scrap.x - 50, scrap.y - 44, 52, 22);
-    wreck.lineStyle(4, COLOURS.ink, 1).strokeRect(scrap.x - 50, scrap.y - 44, 52, 22);
-    for (const [dx, dy, size] of [
-      [22, -40, 34],
-      [44, -24, 26],
-    ]) {
-      wreck.fillStyle(COLOURS.timber, 1).fillRect(scrap.x + dx, scrap.y + dy, size, size);
-      wreck.lineStyle(4, COLOURS.ink, 1).strokeRect(scrap.x + dx, scrap.y + dy, size, size);
-      wreck.lineBetween(scrap.x + dx, scrap.y + dy, scrap.x + dx + size, scrap.y + dy + size);
-    }
-
-    const label = { fontFamily: FONT, fontSize: '22px', color: CSS.slate };
-    this.add.text(forest.x, forest.y + 22, 'Forest', label).setOrigin(0.5, 0).setDepth(DEPTH.background + 2);
-    this.add.text(hunt.x, hunt.y + 22, 'Hunting', label).setOrigin(0.5, 0).setDepth(DEPTH.background + 2);
-    this.add.text(scrap.x, scrap.y + 18, 'Scrap', label).setOrigin(0.5, 0).setDepth(DEPTH.background + 2);
   }
 
   private drawFurnace(): void {
@@ -619,7 +640,8 @@ export class CityScene extends Phaser.Scene {
         frequency: 90,
         advance: 15000,
       })
-      .setDepth(DEPTH.snowfall);
+      .setDepth(DEPTH.snowfall)
+      .setScrollFactor(0);
   }
 }
 
