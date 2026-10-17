@@ -1,5 +1,5 @@
 {
-  "generated": 6,
+  "generated": 28,
   "entries": [
     {
       "id": "pine",
@@ -33,6 +33,138 @@
     {
       "id": "wolf",
       "at": "2026-10-16T23:44:59.921Z",
+      "model": "codex",
+      "size": "1536x1024"
+    },
+    {
+      "id": "huntingLodge",
+      "at": "2026-10-16T23:50:51.259Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "storehouse",
+      "at": "2026-10-16T23:51:59.719Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "kitchen",
+      "at": "2026-10-16T23:52:43.005Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "workshop",
+      "at": "2026-10-16T23:53:34.701Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "researchHut",
+      "at": "2026-10-16T23:54:28.505Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "bunkhouse",
+      "at": "2026-10-16T23:55:28.445Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "expeditionPost",
+      "at": "2026-10-16T23:56:20.418Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "watchtower",
+      "at": "2026-10-16T23:57:22.049Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "hotSprings",
+      "at": "2026-10-16T23:58:26.895Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "barracks",
+      "at": "2026-10-16T23:59:33.852Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "signalBeacon",
+      "at": "2026-10-17T00:00:33.409Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "sledShed",
+      "at": "2026-10-17T00:01:39.873Z",
+      "model": "codex",
+      "size": "1024x1024"
+    },
+    {
+      "id": "jan-chef",
+      "at": "2026-10-17T00:02:26.406Z",
+      "model": "codex",
+      "size": "1024x1536"
+    },
+    {
+      "id": "jan-sleepy",
+      "at": "2026-10-17T00:03:02.514Z",
+      "model": "codex",
+      "size": "1024x1536"
+    },
+    {
+      "id": "jan-spreadsheet",
+      "at": "2026-10-17T00:03:56.057Z",
+      "model": "codex",
+      "size": "1024x1536"
+    },
+    {
+      "id": "jan-keys",
+      "at": "2026-10-17T00:04:38.826Z",
+      "model": "codex",
+      "size": "1024x1536"
+    },
+    {
+      "id": "jan-lumberjack",
+      "at": "2026-10-17T00:05:23.498Z",
+      "model": "codex",
+      "size": "1024x1536"
+    },
+    {
+      "id": "jan-dj",
+      "at": "2026-10-17T00:06:15.740Z",
+      "model": "codex",
+      "size": "1024x1536"
+    },
+    {
+      "id": "bear",
+      "at": "2026-10-17T00:07:12.573Z",
+      "model": "codex",
+      "size": "1536x1024"
+    },
+    {
+      "id": "oldBear",
+      "at": "2026-10-17T00:08:03.008Z",
+      "model": "codex",
+      "size": "1536x1024"
+    },
+    {
+      "id": "scrap",
+      "at": "2026-10-17T00:08:45.045Z",
+      "model": "codex",
+      "size": "1536x1024"
+    },
+    {
+      "id": "oldBear",
+      "at": "2026-10-17T00:10:24.588Z",
       "model": "codex",
       "size": "1536x1024"
     }

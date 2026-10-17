@@ -6,6 +6,11 @@ import Phaser from 'phaser';
 const URLS = import.meta.glob('../assets/art/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 const key = (id: string): string => `art:${id}`;
+
+/** URL of an art PNG for HTML overlays, or null if it hasn't been generated. */
+export function artUrl(id: string): string | null {
+  return URLS[`../assets/art/${id}.png`] ?? null;
+}
 /** Frame name for the image cropped to its visible pixels (generated images have empty margins). */
 const TRIM = 'trim';
 /** Pixels at or below this alpha count as empty when cropping. */
@@ -54,12 +59,17 @@ export function trimArt(scene: Phaser.Scene): void {
   }
 }
 
-/** Size an art image by height or by width, keeping its proportions. */
-export type ArtFit = { height: number } | { width: number };
+/** Size an art image by height, by width, or to fit inside a box, always keeping its proportions. */
+export type ArtFit = { height: number } | { width: number } | { maxWidth: number; maxHeight: number };
 
 /** An art image standing on (x, y): bottom-centre origin, cropped, scaled to fit. */
 export function artImage(scene: Phaser.Scene, id: string, x: number, y: number, fit: ArtFit): Phaser.GameObjects.Image {
   const img = scene.add.image(x, y, key(id), scene.textures.get(key(id)).has(TRIM) ? TRIM : undefined).setOrigin(0.5, 1);
-  const scale = 'height' in fit ? fit.height / img.height : fit.width / img.width;
+  const scale =
+    'height' in fit
+      ? fit.height / img.height
+      : 'width' in fit
+        ? fit.width / img.width
+        : Math.min(fit.maxWidth / img.width, fit.maxHeight / img.height);
   return img.setScale(scale);
 }

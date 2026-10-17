@@ -15,8 +15,8 @@ const ROOF_H = 50;
 const BAR_W = 160;
 const BAR_H = 20;
 const PILED: StoredResource[] = ['wood', 'food', 'materials'];
-/** Width of a building's generated art, in logical px. */
-const ART_WIDTH = 175;
+/** A building's generated art fits inside this box (logical px), so tall towers don't loom over the map. */
+const ART_BOX = { maxWidth: 175, maxHeight: 185 };
 
 /**
  * One building site: an empty plot, a construction site or a placeholder building, with its pile count
@@ -133,7 +133,7 @@ export class SiteView extends Phaser.GameObjects.Container {
   private drawArt(key: BuildingKey, level: number, piles: string[]): void {
     if (this.artKey !== key) {
       this.art?.destroy();
-      this.art = artImage(this.scene, key, 0, 0, { width: ART_WIDTH });
+      this.art = artImage(this.scene, key, 0, 0, ART_BOX);
       this.addAt(this.art, 0);
       this.artKey = key;
       this.barPos.y = -this.art.displayHeight - 30;

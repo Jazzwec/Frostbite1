@@ -31,7 +31,7 @@
     { "id": "jan-dj", "size": "1024x1536", "refs": ["jan"], "prompt": "The same man as the reference image, now DJ Jan: big orange headphones over his beanie, nodding to music. Same art style, same face and beard." },
     { "id": "wolf", "size": "1536x1024", "prompt": "A lean grey winter wolf walking to the right, side view, alert ears, bushy tail." },
     { "id": "bear", "size": "1536x1024", "refs": ["wolf"], "prompt": "A big brown bear walking to the right, side view, heavy and shaggy. Same art style as the reference image." },
-    { "id": "oldBear", "size": "1536x1024", "refs": ["bear"], "prompt": "The Old Bear: an enormous ancient dark brown bear with grey muzzle and a scar over one eye, walking to the right, side view. Same art style as the reference image." },
+    { "id": "oldBear", "size": "1536x1024", "refs": ["bear"], "prompt": "The Old Bear, a legendary boss animal: clearly different from the reference bear. Much darker, almost black-brown fur with frosty grey-white streaks along the back and a grey-white muzzle, a heavier hunched build with a big shoulder hump, a jagged pale scar across one eye, an icy blue glint in the other eye, long pale claws. Walking to the right, side view. Same art style and outline weight as the reference image." },
     { "id": "pine", "size": "1024x1536", "prompt": "A single snowy pine tree with a short brown trunk, dark green layered branches dusted with snow." },
     { "id": "scrap", "size": "1536x1024", "refs": ["furnace"], "prompt": "A wrecked wooden sled half buried in snow with broken crates, planks and scrap metal around it. Same art style as the reference image." }
   ]

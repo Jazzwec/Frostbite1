@@ -4,6 +4,7 @@ import { VARIANTS } from '../../engine/balance';
 import type { VariantKey } from '../../engine/types';
 import { engine } from '../../game/runtime';
 import { h } from './dom';
+import { artUrl } from '../art';
 import { janPortrait } from './portrait';
 import type { Screen } from './Shell';
 
@@ -30,8 +31,11 @@ export function collectionScreen(): Screen {
         { class: 'grid2' },
         ...ORDER.map((v) => {
           const met = s.meta.found[v];
+          // Generated art when it exists (a black silhouette until found), else the drawn SVG portrait.
+          const url = artUrl(`jan-${v}`) ?? artUrl('jan');
           const portrait = h('div', { class: 'portrait' });
-          portrait.innerHTML = janPortrait(v, met > 0); // static SVG built from theme colours
+          if (url) portrait.append(h('img', { src: url, alt: '', class: met > 0 ? '' : 'silhouette' }));
+          else portrait.innerHTML = janPortrait(v, met > 0); // static SVG built from theme colours
           if (met === 0) {
             return h('div', { class: 'jan-card unfound' }, portrait, h('b', {}, '???'), h('div', { class: 'hint' }, unlockHint(v)));
           }
